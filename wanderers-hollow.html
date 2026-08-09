@@ -1,0 +1,618 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Wanderer's Hollow</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=VT323&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --ink:#141f19;
+    --ink-deep:#0d1611;
+    --moss:#3f5c42;
+    --moss-light:#5a7d5e;
+    --parchment:#ece0c2;
+    --parchment-dim:#d9caa3;
+    --amber:#d99a3f;
+    --amber-glow:#f0b968;
+    --rust:#a4402f;
+    --water:#3f6b7a;
+    --text-dark:#2b2318;
+    --text-light:#f2ecd8;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    background:
+      radial-gradient(ellipse at 50% 0%, #1c2b21 0%, var(--ink) 55%, var(--ink-deep) 100%);
+    min-height:100vh;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    font-family:'VT323', monospace;
+    color:var(--text-light);
+    padding:24px 12px;
+  }
+  .game-wrap{
+    width:100%;
+    max-width:620px;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    gap:14px;
+  }
+  h1{
+    font-family:'Press Start 2P', monospace;
+    font-size:15px;
+    letter-spacing:1px;
+    color:var(--amber-glow);
+    text-shadow:0 0 12px rgba(217,154,63,0.45), 0 2px 0 #000;
+    margin:4px 0 0 0;
+    text-align:center;
+  }
+  .subtitle{
+    font-size:16px;
+    color:var(--parchment-dim);
+    margin-top:-8px;
+    letter-spacing:0.5px;
+    text-align:center;
+  }
+  .stats-bar{
+    width:100%;
+    display:flex;
+    justify-content:space-between;
+    background:var(--parchment);
+    color:var(--text-dark);
+    border:3px solid var(--moss);
+    border-radius:6px;
+    padding:8px 14px;
+    font-size:19px;
+    box-shadow:0 4px 0 rgba(0,0,0,0.35);
+  }
+  .stat{display:flex;align-items:center;gap:6px;}
+  .stat b{font-family:'VT323', monospace; font-weight:normal;}
+
+  .map-shell{
+    position:relative;
+    border:4px solid var(--moss);
+    border-radius:6px;
+    box-shadow:0 6px 0 rgba(0,0,0,0.4), inset 0 0 30px rgba(0,0,0,0.5);
+    background:var(--ink-deep);
+    padding:6px;
+  }
+  #grid{
+    display:grid;
+    grid-template-columns:repeat(12, minmax(0,1fr));
+    grid-auto-rows:1fr;
+    gap:1px;
+    width:min(88vw, 552px);
+    aspect-ratio:12/9;
+    background:#0a120d;
+  }
+  .cell{
+    position:relative;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    font-size:min(4.2vw, 22px);
+    user-select:none;
+  }
+  .tile-wall{background:#233421; box-shadow:inset 0 0 0 1px #1a271a;}
+  .tile-wall::after{content:"";}
+  .tile-grass{background:repeating-linear-gradient(45deg,#2c4a2e,#2c4a2e 6px,#325232 6px,#325232 12px);}
+  .tile-water{background:linear-gradient(180deg,#3f6b7a,#2c4d57); box-shadow:inset 0 0 8px rgba(0,0,0,0.5);}
+  .tile-npc{background:repeating-linear-gradient(45deg,#2c4a2e,#2c4a2e 6px,#325232 6px,#325232 12px);}
+  .tile-item{background:repeating-linear-gradient(45deg,#2c4a2e,#2c4a2e 6px,#325232 6px,#325232 12px);}
+  .tile-goal{background:#3a2c22; box-shadow:inset 0 0 0 1px #55402d;}
+
+  .glow{
+    animation:pulse 1.6s ease-in-out infinite;
+  }
+  @keyframes pulse{
+    0%,100%{ filter:drop-shadow(0 0 2px rgba(240,185,104,0.2)); transform:scale(1); }
+    50%{ filter:drop-shadow(0 0 7px rgba(240,185,104,0.85)); transform:scale(1.12); }
+  }
+  .player{
+    filter:drop-shadow(0 0 5px rgba(255,255,255,0.6));
+    transition:transform 0.08s ease;
+  }
+
+  .hint{
+    font-size:16px;
+    color:var(--parchment-dim);
+    text-align:center;
+  }
+  .dpad{
+    display:grid;
+    grid-template-columns:repeat(3, 44px);
+    grid-template-rows:repeat(3, 44px);
+    gap:4px;
+  }
+  .dpad button{
+    font-family:'VT323', monospace;
+    font-size:20px;
+    background:var(--moss);
+    color:var(--text-light);
+    border:2px solid #274428;
+    border-radius:6px;
+    cursor:pointer;
+  }
+  .dpad button:active{ background:var(--moss-light); }
+  .dpad .spacer{visibility:hidden;}
+
+  /* Dialogue overlay */
+  .overlay{
+    position:fixed;
+    inset:0;
+    background:rgba(10,15,11,0.72);
+    display:none;
+    align-items:flex-end;
+    justify-content:center;
+    padding:18px;
+    z-index:10;
+  }
+  .overlay.active{display:flex;}
+  .dialogue-box{
+    width:100%;
+    max-width:560px;
+    background:var(--parchment);
+    color:var(--text-dark);
+    border:4px solid var(--amber);
+    border-radius:8px;
+    padding:18px 20px;
+    box-shadow:0 8px 0 rgba(0,0,0,0.4);
+    font-size:20px;
+    line-height:1.4;
+  }
+  .dialogue-name{
+    font-family:'Press Start 2P', monospace;
+    font-size:11px;
+    color:var(--rust);
+    margin-bottom:8px;
+    letter-spacing:0.5px;
+  }
+  .dialogue-text{margin-bottom:14px; min-height:44px;}
+  .choices{display:flex; flex-direction:column; gap:8px;}
+  .choice-btn{
+    font-family:'VT323', monospace;
+    font-size:19px;
+    text-align:left;
+    background:var(--moss);
+    color:var(--text-light);
+    border:2px solid #274428;
+    border-radius:5px;
+    padding:9px 12px;
+    cursor:pointer;
+  }
+  .choice-btn:hover{background:var(--moss-light);}
+  .continue-btn{
+    font-family:'VT323', monospace;
+    font-size:19px;
+    background:var(--amber);
+    color:#2b1c0a;
+    border:2px solid #a06b1f;
+    border-radius:5px;
+    padding:8px 18px;
+    cursor:pointer;
+    align-self:flex-end;
+  }
+  .toast{
+    position:fixed;
+    top:18px;
+    left:50%;
+    transform:translateX(-50%);
+    background:var(--parchment);
+    color:var(--text-dark);
+    border:2px solid var(--rust);
+    border-radius:6px;
+    padding:8px 16px;
+    font-size:18px;
+    z-index:20;
+    opacity:0;
+    pointer-events:none;
+    transition:opacity 0.25s ease, transform 0.25s ease;
+  }
+  .toast.show{opacity:1; transform:translateX(-50%) translateY(6px);}
+
+  .end-overlay{
+    position:fixed;
+    inset:0;
+    background:rgba(5,8,6,0.88);
+    display:none;
+    align-items:center;
+    justify-content:center;
+    padding:20px;
+    z-index:30;
+  }
+  .end-overlay.active{display:flex;}
+  .end-box{
+    max-width:480px;
+    background:var(--parchment);
+    color:var(--text-dark);
+    border:4px solid var(--amber);
+    border-radius:8px;
+    padding:26px;
+    text-align:center;
+    box-shadow:0 8px 0 rgba(0,0,0,0.4);
+  }
+  .end-title{
+    font-family:'Press Start 2P', monospace;
+    font-size:16px;
+    color:var(--rust);
+    margin-bottom:14px;
+  }
+  .end-text{font-size:20px; line-height:1.4; margin-bottom:18px;}
+  .end-stats{font-size:18px; margin-bottom:18px; color:#4a3d24;}
+  .restart-btn{
+    font-family:'Press Start 2P', monospace;
+    font-size:12px;
+    background:var(--rust);
+    color:var(--text-light);
+    border:2px solid #6e281c;
+    border-radius:6px;
+    padding:12px 18px;
+    cursor:pointer;
+  }
+</style>
+</head>
+<body>
+
+<div class="game-wrap">
+  <h1>WANDERER'S HOLLOW</h1>
+  <div class="subtitle">Find the Elder before the dark takes the grove.</div>
+
+  <div class="stats-bar">
+    <div class="stat">♥ <b id="stat-hp">3</b></div>
+    <div class="stat">⛁ <b id="stat-gold">8</b></div>
+    <div class="stat">☆ <b id="stat-rep">0</b></div>
+    <div class="stat">🏮 <b id="stat-lantern">no</b></div>
+  </div>
+
+  <div class="map-shell">
+    <div id="grid"></div>
+  </div>
+
+  <div class="hint">Move with arrow keys / WASD, or the pad below.</div>
+  <div class="dpad">
+    <div class="spacer"></div><button data-dir="up">▲</button><div class="spacer"></div>
+    <button data-dir="left">◀</button><div class="spacer"></div><button data-dir="right">▶</button>
+    <div class="spacer"></div><button data-dir="down">▼</button><div class="spacer"></div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<div class="overlay" id="overlay">
+  <div class="dialogue-box">
+    <div class="dialogue-name" id="dlg-name">???</div>
+    <div class="dialogue-text" id="dlg-text"></div>
+    <div class="choices" id="dlg-choices"></div>
+  </div>
+</div>
+
+<div class="end-overlay" id="end-overlay">
+  <div class="end-box">
+    <div class="end-title" id="end-title">THE END</div>
+    <div class="end-text" id="end-text"></div>
+    <div class="end-stats" id="end-stats"></div>
+    <button class="restart-btn" id="restart-btn">PLAY AGAIN</button>
+  </div>
+</div>
+
+<script>
+(function(){
+  // Map legend: # wall, ~ water, . grass, M merchant, H hunter, C child, L lantern, D elder's door
+  const mapRows = [
+    "############",
+    "#..........#",
+    "#.M......H.#",
+    "#....###...#",
+    "#.L..###..D#",
+    "#....###...#",
+    "#.C........#",
+    "#....~~....#",
+    "############"
+  ];
+
+  let grid = mapRows.map(r => r.split(""));
+  const ROWS = grid.length, COLS = grid[0].length;
+
+  let state = {
+    x: 1, y: 1,
+    hp: 3, gold: 8, rep: 0,
+    hasLantern: false,
+    talked: { M:false, H:false, C:false },
+    childPromised: false,
+    dialogueOpen: false,
+    ended: false
+  };
+
+  const gridEl = document.getElementById('grid');
+  const toastEl = document.getElementById('toast');
+  const overlayEl = document.getElementById('overlay');
+  const dlgName = document.getElementById('dlg-name');
+  const dlgText = document.getElementById('dlg-text');
+  const dlgChoices = document.getElementById('dlg-choices');
+  const endOverlay = document.getElementById('end-overlay');
+
+  function tileIcon(ch){
+    switch(ch){
+      case '#': return '';
+      case '~': return '';
+      case 'M': return '🧑\u200d🌾';
+      case 'H': return '🏹';
+      case 'C': return '🧒';
+      case 'L': return '🏮';
+      case 'D': return '🚪';
+      default: return '';
+    }
+  }
+  function tileClass(ch){
+    switch(ch){
+      case '#': return 'tile-wall';
+      case '~': return 'tile-water';
+      case 'M': case 'H': case 'C': return 'tile-npc';
+      case 'L': return 'tile-item';
+      case 'D': return 'tile-goal';
+      default: return 'tile-grass';
+    }
+  }
+  function isInteractive(ch){
+    return ch === 'M' || ch === 'H' || ch === 'C' || ch === 'L' || ch === 'D';
+  }
+  function isObstacle(ch){
+    return ch === '#' || ch === '~';
+  }
+
+  function render(){
+    gridEl.innerHTML = '';
+    for(let y=0;y<ROWS;y++){
+      for(let x=0;x<COLS;x++){
+        const ch = grid[y][x];
+        const cell = document.createElement('div');
+        cell.className = 'cell ' + tileClass(ch);
+        if(x===state.x && y===state.y){
+          cell.innerHTML = '<span class="player">🧙</span>';
+        } else if(isInteractive(ch)){
+          const glowClass = (ch==='L') ? ' glow' : '';
+          cell.innerHTML = '<span class="'+glowClass.trim()+'">'+tileIcon(ch)+'</span>';
+        }
+        gridEl.appendChild(cell);
+      }
+    }
+    document.getElementById('stat-hp').textContent = state.hp;
+    document.getElementById('stat-gold').textContent = state.gold;
+    document.getElementById('stat-rep').textContent = state.rep;
+    document.getElementById('stat-lantern').textContent = state.hasLantern ? 'yes' : 'no';
+  }
+
+  let toastTimer = null;
+  function showToast(msg){
+    toastEl.textContent = msg;
+    toastEl.classList.add('show');
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(()=> toastEl.classList.remove('show'), 2200);
+  }
+
+  function openDialogue(name, text, choices){
+    state.dialogueOpen = true;
+    dlgName.textContent = name;
+    dlgText.textContent = text;
+    dlgChoices.innerHTML = '';
+    choices.forEach(choice => {
+      const btn = document.createElement('button');
+      btn.className = 'choice-btn';
+      btn.textContent = choice.label;
+      btn.onclick = () => choice.action();
+      dlgChoices.appendChild(btn);
+    });
+    overlayEl.classList.add('active');
+  }
+
+  function showResponse(name, text){
+    dlgName.textContent = name;
+    dlgText.textContent = text;
+    dlgChoices.innerHTML = '';
+    const btn = document.createElement('button');
+    btn.className = 'continue-btn';
+    btn.textContent = 'Continue';
+    btn.onclick = closeDialogue;
+    dlgChoices.appendChild(btn);
+  }
+
+  function closeDialogue(){
+    state.dialogueOpen = false;
+    overlayEl.classList.remove('active');
+    render();
+  }
+
+  function talkMerchant(){
+    const first = !state.talked.M;
+    state.talked.M = true;
+    const intro = first
+      ? "A weathered merchant eyes your bag. \"Fancy some wares, traveler? Been dark round these parts lately.\""
+      : "\"Back again? Mind the shadows near the grove.\"";
+    openDialogue("MERCHANT", intro, [
+      {
+        label: "Buy a lantern (10 gold)",
+        action: () => {
+          if(state.hasLantern){
+            showResponse("MERCHANT", "\"You've already got a lantern, friend. One's plenty.\"");
+          } else if(state.gold >= 10){
+            state.gold -= 10;
+            state.hasLantern = true;
+            showResponse("MERCHANT", "He hands you a battered lantern, its flame flickering to life. \"Careful in the dark now.\"");
+          } else {
+            showResponse("MERCHANT", "\"Not enough coin, friend. Come back when you've got ten pieces.\"");
+          }
+        }
+      },
+      {
+        label: "Ask about the village",
+        action: () => {
+          showResponse("MERCHANT", "\"Wanderer's Hollow, they call it. Quiet, 'til the shadows started creeping out from the old grove.\"");
+        }
+      },
+      {
+        label: "Leave",
+        action: closeDialogue
+      }
+    ]);
+  }
+
+  function talkHunter(){
+    const first = !state.talked.H;
+    state.talked.H = true;
+    const intro = first
+      ? "A weathered hunter sizes you up. \"Not many folk pass through anymore. Wolves took to the grove after the light went out.\""
+      : "\"Still poking around? Suit yourself.\"";
+    openDialogue("HUNTER", intro, [
+      {
+        label: "Ask for advice",
+        action: () => {
+          state.rep += 1;
+          showResponse("HUNTER", "\"Keep your wits sharp and your feet quiet. And don't go into the grove without a light.\" (+1 Reputation)");
+        }
+      },
+      {
+        label: "Challenge him to an arm-wrestle",
+        action: () => {
+          if(Math.random() < 0.5){
+            state.gold += 5;
+            showResponse("HUNTER", "You slam his arm to the table. He laughs and tosses you a few coins. \"Fair enough.\" (+5 Gold)");
+          } else {
+            state.hp = Math.max(0, state.hp - 1);
+            showResponse("HUNTER", "He pins your arm easily. \"Ha! Try again sometime.\" (-1 HP)");
+          }
+        }
+      },
+      {
+        label: "Leave",
+        action: closeDialogue
+      }
+    ]);
+  }
+
+  function talkChild(){
+    const first = !state.talked.C;
+    state.talked.C = true;
+    if(!first){
+      openDialogue("CHILD", state.childPromised ? "\"Did you see my cat out there?\"" : "The child looks at you hopefully, then away.", [
+        { label: "Leave", action: closeDialogue }
+      ]);
+      return;
+    }
+    openDialogue("CHILD", "A small child tugs your sleeve. \"Have you seen my cat, mister? She ran off toward the grove and I'm scared to go after her.\"", [
+      {
+        label: "Promise to look for her",
+        action: () => {
+          state.rep += 1;
+          state.childPromised = true;
+          showResponse("CHILD", "\"Really? Thank you!\" (+1 Reputation) She points toward the dark trees at the edge of the map.");
+        }
+      },
+      {
+        label: "Say you're too busy",
+        action: () => {
+          state.rep -= 1;
+          showResponse("CHILD", "The child's face falls. She shuffles away without a word. (-1 Reputation)");
+        }
+      },
+      {
+        label: "Leave",
+        action: closeDialogue
+      }
+    ]);
+  }
+
+  function pickupLantern(x,y){
+    state.hasLantern = true;
+    grid[y][x] = '.';
+    showToast("You found a lantern! It might help you see through the dark grove ahead.");
+  }
+
+  function reachDoor(){
+    if(!state.hasLantern){
+      openDialogue("ELDER'S DOOR", "The door creaks open onto darkness. Without a light, you can't find your way inside. Perhaps a lantern would help.", [
+        { label: "Step back", action: closeDialogue }
+      ]);
+      return;
+    }
+    state.ended = true;
+    let title, text;
+    if(state.rep >= 2){
+      title = "A WARM WELCOME";
+      text = "The Elder welcomes you in, lantern light dancing in her eyes. \"You've looked after this village well,\" she says. \"The grove will settle now that its people are cared for.\"";
+    } else if(state.rep >= 0){
+      title = "A QUIET ARRIVAL";
+      text = "The Elder greets you with a cautious nod. \"You found your way here, at least,\" she says. \"The village will need more than that, in time.\"";
+    } else {
+      title = "A COLD RECEPTION";
+      text = "The Elder studies you for a long moment. \"Word travels fast in a small place,\" she says quietly, and says little else.";
+    }
+    document.getElementById('end-title').textContent = title;
+    document.getElementById('end-text').textContent = text;
+    document.getElementById('end-stats').textContent =
+      "HP: " + state.hp + "   Gold: " + state.gold + "   Reputation: " + state.rep +
+      (state.childPromised ? "   (You kept your promise to the child.)" : "");
+    endOverlay.classList.add('active');
+  }
+
+  function handleTile(x,y){
+    const ch = grid[y][x];
+    if(ch === 'M') talkMerchant();
+    else if(ch === 'H') talkHunter();
+    else if(ch === 'C') talkChild();
+    else if(ch === 'L') pickupLantern(x,y);
+    else if(ch === 'D') reachDoor();
+  }
+
+  function move(dir){
+    if(state.dialogueOpen || state.ended) return;
+    let nx = state.x, ny = state.y;
+    if(dir === 'up') ny -= 1;
+    if(dir === 'down') ny += 1;
+    if(dir === 'left') nx -= 1;
+    if(dir === 'right') nx += 1;
+    if(nx < 0 || nx >= COLS || ny < 0 || ny >= ROWS) return;
+    const target = grid[ny][nx];
+    if(isObstacle(target)){
+      showToast(target === '~' ? "The water's too deep to cross here." : "Too dense to push through.");
+      return;
+    }
+    state.x = nx; state.y = ny;
+    render();
+    handleTile(nx, ny);
+  }
+
+  document.addEventListener('keydown', (e) => {
+    const map = { ArrowUp:'up', ArrowDown:'down', ArrowLeft:'left', ArrowRight:'right',
+                  w:'up', s:'down', a:'left', d:'right', W:'up', S:'down', A:'left', D:'right' };
+    if(map[e.key]){
+      e.preventDefault();
+      move(map[e.key]);
+    }
+  });
+
+  document.querySelectorAll('.dpad button[data-dir]').forEach(btn => {
+    btn.addEventListener('click', () => move(btn.getAttribute('data-dir')));
+  });
+
+  document.getElementById('restart-btn').addEventListener('click', () => {
+    grid = mapRows.map(r => r.split(""));
+    state = {
+      x:1, y:1, hp:3, gold:8, rep:0, hasLantern:false,
+      talked:{M:false,H:false,C:false}, childPromised:false,
+      dialogueOpen:false, ended:false
+    };
+    endOverlay.classList.remove('active');
+    render();
+  });
+
+  render();
+})();
+</script>
+
+</body>
+</html>

@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Wanderer's Hollow</title>
+<title>El Camino a Mérida</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=VT323&display=swap" rel="stylesheet">
 <style>
@@ -17,15 +17,17 @@
     --amber:#d99a3f;
     --amber-glow:#f0b968;
     --rust:#a4402f;
-    --water:#3f6b7a;
+    --ocean:#12303a;
+    --ocean-deep:#0a2028;
+    --land:#5c7a4c;
+    --land-edge:#33481f;
     --text-dark:#2b2318;
     --text-light:#f2ecd8;
   }
   *{box-sizing:border-box;}
   html,body{margin:0;padding:0;}
   body{
-    background:
-      radial-gradient(ellipse at 50% 0%, #1c2b21 0%, var(--ink) 55%, var(--ink-deep) 100%);
+    background:radial-gradient(ellipse at 50% 0%, #1c2b21 0%, var(--ink) 55%, var(--ink-deep) 100%);
     min-height:100vh;
     display:flex;
     align-items:center;
@@ -36,11 +38,11 @@
   }
   .game-wrap{
     width:100%;
-    max-width:620px;
+    max-width:640px;
     display:flex;
     flex-direction:column;
     align-items:center;
-    gap:14px;
+    gap:12px;
   }
   h1{
     font-family:'Press Start 2P', monospace;
@@ -54,8 +56,7 @@
   .subtitle{
     font-size:16px;
     color:var(--parchment-dim);
-    margin-top:-8px;
-    letter-spacing:0.5px;
+    margin-top:-6px;
     text-align:center;
   }
   .stats-bar{
@@ -66,219 +67,253 @@
     color:var(--text-dark);
     border:3px solid var(--moss);
     border-radius:6px;
-    padding:8px 14px;
-    font-size:19px;
+    padding:8px 12px;
+    font-size:18px;
     box-shadow:0 4px 0 rgba(0,0,0,0.35);
   }
-  .stat{display:flex;align-items:center;gap:6px;}
-  .stat b{font-family:'VT323', monospace; font-weight:normal;}
+  .stat{display:flex;align-items:center;gap:5px;}
 
   .map-shell{
     position:relative;
+    width:100%;
+    aspect-ratio:600/500;
     border:4px solid var(--moss);
     border-radius:6px;
-    box-shadow:0 6px 0 rgba(0,0,0,0.4), inset 0 0 30px rgba(0,0,0,0.5);
-    background:var(--ink-deep);
-    padding:6px;
+    overflow:hidden;
+    box-shadow:0 6px 0 rgba(0,0,0,0.4), inset 0 0 40px rgba(0,0,0,0.5);
+    background:var(--ocean);
   }
-  #grid{
-    display:grid;
-    grid-template-columns:repeat(12, minmax(0,1fr));
-    grid-auto-rows:1fr;
-    gap:1px;
-    width:min(88vw, 552px);
-    aspect-ratio:12/9;
-    background:#0a120d;
-  }
-  .cell{
-    position:relative;
-    display:flex;
-    align-items:center;
-    justify-content:center;
-    font-size:min(4.2vw, 22px);
-    user-select:none;
-  }
-  .tile-wall{background:#233421; box-shadow:inset 0 0 0 1px #1a271a;}
-  .tile-wall::after{content:"";}
-  .tile-grass{background:repeating-linear-gradient(45deg,#2c4a2e,#2c4a2e 6px,#325232 6px,#325232 12px);}
-  .tile-water{background:linear-gradient(180deg,#3f6b7a,#2c4d57); box-shadow:inset 0 0 8px rgba(0,0,0,0.5);}
-  .tile-npc{background:repeating-linear-gradient(45deg,#2c4a2e,#2c4a2e 6px,#325232 6px,#325232 12px);}
-  .tile-item{background:repeating-linear-gradient(45deg,#2c4a2e,#2c4a2e 6px,#325232 6px,#325232 12px);}
-  .tile-goal{background:#3a2c22; box-shadow:inset 0 0 0 1px #55402d;}
-
-  .glow{
-    animation:pulse 1.6s ease-in-out infinite;
-  }
-  @keyframes pulse{
-    0%,100%{ filter:drop-shadow(0 0 2px rgba(240,185,104,0.2)); transform:scale(1); }
-    50%{ filter:drop-shadow(0 0 7px rgba(240,185,104,0.85)); transform:scale(1.12); }
-  }
-  .player{
-    filter:drop-shadow(0 0 5px rgba(255,255,255,0.6));
-    transition:transform 0.08s ease;
-  }
-
-  .hint{
-    font-size:16px;
-    color:var(--parchment-dim);
-    text-align:center;
-  }
-  .dpad{
-    display:grid;
-    grid-template-columns:repeat(3, 44px);
-    grid-template-rows:repeat(3, 44px);
-    gap:4px;
-  }
-  .dpad button{
+  .map-shell svg{ position:absolute; inset:0; width:100%; height:100%; }
+  .ocean-label{
     font-family:'VT323', monospace;
-    font-size:20px;
+    fill:#4f7c8c;
+    font-size:13px;
+    letter-spacing:2px;
+    opacity:0.8;
+  }
+
+  .node-btn{
+    position:absolute;
+    transform:translate(-50%,-50%);
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    gap:2px;
+    background:none;
+    border:none;
+    cursor:pointer;
+    padding:0;
+    z-index:3;
+  }
+  .node-dot{
+    width:14px; height:14px;
+    border-radius:50%;
+    background:var(--parchment-dim);
+    border:2px solid var(--land-edge);
+  }
+  .node-label{
+    font-size:13px;
+    color:var(--text-light);
+    text-shadow:0 1px 2px #000, 0 0 4px rgba(0,0,0,0.8);
+    white-space:nowrap;
+  }
+  .node-btn.current .node-dot{
+    background:var(--amber-glow);
+    border-color:var(--amber);
+    box-shadow:0 0 10px 3px rgba(240,185,104,0.7);
+  }
+  .node-btn.current .node-label{ color:var(--amber-glow); font-weight:bold; }
+  .node-btn.reachable .node-dot{
+    animation:pulseDot 1.4s ease-in-out infinite;
+  }
+  .node-btn.visited .node-dot{
+    background:var(--moss-light);
+    border-color:#1f3320;
+  }
+  @keyframes pulseDot{
+    0%,100%{ box-shadow:0 0 0 0 rgba(217,154,63,0.55); }
+    50%{ box-shadow:0 0 0 6px rgba(217,154,63,0); }
+  }
+
+  #player-token{
+    position:absolute;
+    transform:translate(-50%,-90%);
+    font-size:22px;
+    filter:drop-shadow(0 0 5px rgba(255,255,255,0.6));
+    transition:left 0.6s ease, top 0.6s ease;
+    z-index:4;
+    pointer-events:none;
+  }
+
+  .dest-list{
+    width:100%;
+    display:flex;
+    flex-wrap:wrap;
+    gap:8px;
+    justify-content:center;
+  }
+  .dest-btn{
+    font-family:'VT323', monospace;
+    font-size:17px;
     background:var(--moss);
     color:var(--text-light);
     border:2px solid #274428;
     border-radius:6px;
+    padding:7px 12px;
     cursor:pointer;
   }
-  .dpad button:active{ background:var(--moss-light); }
-  .dpad .spacer{visibility:hidden;}
+  .dest-btn:hover{ background:var(--moss-light); }
+  .dest-btn:disabled{ opacity:0.4; cursor:default; }
 
-  /* Dialogue overlay */
+  .hint{ font-size:15px; color:var(--parchment-dim); text-align:center; }
+
   .overlay{
-    position:fixed;
-    inset:0;
+    position:fixed; inset:0;
     background:rgba(10,15,11,0.72);
-    display:none;
-    align-items:flex-end;
-    justify-content:center;
-    padding:18px;
-    z-index:10;
+    display:none; align-items:flex-end; justify-content:center;
+    padding:18px; z-index:10;
   }
-  .overlay.active{display:flex;}
+  .overlay.active{ display:flex; }
   .dialogue-box{
-    width:100%;
-    max-width:560px;
-    background:var(--parchment);
-    color:var(--text-dark);
-    border:4px solid var(--amber);
-    border-radius:8px;
+    width:100%; max-width:560px;
+    background:var(--parchment); color:var(--text-dark);
+    border:4px solid var(--amber); border-radius:8px;
     padding:18px 20px;
     box-shadow:0 8px 0 rgba(0,0,0,0.4);
-    font-size:20px;
-    line-height:1.4;
+    font-size:20px; line-height:1.4;
   }
   .dialogue-name{
     font-family:'Press Start 2P', monospace;
-    font-size:11px;
-    color:var(--rust);
-    margin-bottom:8px;
-    letter-spacing:0.5px;
+    font-size:11px; color:var(--rust);
+    margin-bottom:8px; letter-spacing:0.5px;
   }
-  .dialogue-text{margin-bottom:14px; min-height:44px;}
-  .choices{display:flex; flex-direction:column; gap:8px;}
+  .dialogue-text{ margin-bottom:14px; min-height:44px; }
+  .choices{ display:flex; flex-direction:column; gap:8px; }
   .choice-btn{
-    font-family:'VT323', monospace;
-    font-size:19px;
-    text-align:left;
-    background:var(--moss);
-    color:var(--text-light);
-    border:2px solid #274428;
-    border-radius:5px;
-    padding:9px 12px;
-    cursor:pointer;
+    font-family:'VT323', monospace; font-size:19px; text-align:left;
+    background:var(--moss); color:var(--text-light);
+    border:2px solid #274428; border-radius:5px; padding:9px 12px; cursor:pointer;
   }
-  .choice-btn:hover{background:var(--moss-light);}
+  .choice-btn:hover{ background:var(--moss-light); }
   .continue-btn{
-    font-family:'VT323', monospace;
-    font-size:19px;
-    background:var(--amber);
-    color:#2b1c0a;
-    border:2px solid #a06b1f;
-    border-radius:5px;
-    padding:8px 18px;
-    cursor:pointer;
-    align-self:flex-end;
+    font-family:'VT323', monospace; font-size:19px;
+    background:var(--amber); color:#2b1c0a;
+    border:2px solid #a06b1f; border-radius:5px;
+    padding:8px 18px; cursor:pointer; align-self:flex-end;
   }
+
   .toast{
-    position:fixed;
-    top:18px;
-    left:50%;
-    transform:translateX(-50%);
-    background:var(--parchment);
-    color:var(--text-dark);
-    border:2px solid var(--rust);
-    border-radius:6px;
-    padding:8px 16px;
-    font-size:18px;
-    z-index:20;
-    opacity:0;
-    pointer-events:none;
+    position:fixed; top:18px; left:50%; transform:translateX(-50%);
+    background:var(--parchment); color:var(--text-dark);
+    border:2px solid var(--rust); border-radius:6px;
+    padding:8px 16px; font-size:18px; z-index:20;
+    opacity:0; pointer-events:none;
     transition:opacity 0.25s ease, transform 0.25s ease;
   }
-  .toast.show{opacity:1; transform:translateX(-50%) translateY(6px);}
+  .toast.show{ opacity:1; transform:translateX(-50%) translateY(6px); }
 
   .end-overlay{
-    position:fixed;
-    inset:0;
+    position:fixed; inset:0;
     background:rgba(5,8,6,0.88);
-    display:none;
-    align-items:center;
-    justify-content:center;
-    padding:20px;
-    z-index:30;
+    display:none; align-items:center; justify-content:center;
+    padding:20px; z-index:30;
   }
-  .end-overlay.active{display:flex;}
+  .end-overlay.active{ display:flex; }
   .end-box{
-    max-width:480px;
-    background:var(--parchment);
-    color:var(--text-dark);
-    border:4px solid var(--amber);
-    border-radius:8px;
-    padding:26px;
-    text-align:center;
+    max-width:480px; background:var(--parchment); color:var(--text-dark);
+    border:4px solid var(--amber); border-radius:8px;
+    padding:26px; text-align:center;
     box-shadow:0 8px 0 rgba(0,0,0,0.4);
   }
-  .end-title{
-    font-family:'Press Start 2P', monospace;
-    font-size:16px;
-    color:var(--rust);
-    margin-bottom:14px;
-  }
-  .end-text{font-size:20px; line-height:1.4; margin-bottom:18px;}
-  .end-stats{font-size:18px; margin-bottom:18px; color:#4a3d24;}
+  .end-title{ font-family:'Press Start 2P', monospace; font-size:15px; color:var(--rust); margin-bottom:14px; }
+  .end-text{ font-size:20px; line-height:1.4; margin-bottom:18px; }
+  .end-stats{ font-size:17px; margin-bottom:18px; color:#4a3d24; }
   .restart-btn{
-    font-family:'Press Start 2P', monospace;
-    font-size:12px;
-    background:var(--rust);
-    color:var(--text-light);
-    border:2px solid #6e281c;
-    border-radius:6px;
-    padding:12px 18px;
-    cursor:pointer;
+    font-family:'Press Start 2P', monospace; font-size:12px;
+    background:var(--rust); color:var(--text-light);
+    border:2px solid #6e281c; border-radius:6px;
+    padding:12px 18px; cursor:pointer;
   }
 </style>
 </head>
 <body>
 
 <div class="game-wrap">
-  <h1>WANDERER'S HOLLOW</h1>
-  <div class="subtitle">Find the Elder before the dark takes the grove.</div>
+  <h1>EL CAMINO A MÉRIDA</h1>
+  <div class="subtitle">A journey south, your grandmother's letter in hand.</div>
 
   <div class="stats-bar">
     <div class="stat">♥ <b id="stat-hp">3</b></div>
-    <div class="stat">⛁ <b id="stat-gold">8</b></div>
+    <div class="stat">$ <b id="stat-pesos">15</b></div>
     <div class="stat">☆ <b id="stat-rep">0</b></div>
-    <div class="stat">🏮 <b id="stat-lantern">no</b></div>
+    <div class="stat">🎁 <b id="stat-gift">no</b></div>
   </div>
 
   <div class="map-shell">
-    <div id="grid"></div>
+    <svg viewBox="0 0 600 500" preserveAspectRatio="xMidYMid meet">
+      <defs>
+        <radialGradient id="landGrad" cx="45%" cy="35%" r="75%">
+          <stop offset="0%" stop-color="#6d8c5b"/>
+          <stop offset="100%" stop-color="#4c6b42"/>
+        </radialGradient>
+      </defs>
+      <text x="30" y="250" class="ocean-label" transform="rotate(-90 30 250)">PACIFIC OCEAN</text>
+      <text x="470" y="150" class="ocean-label">GULF OF MEXICO</text>
+      <text x="120" y="140" class="ocean-label" transform="rotate(-70 120 140)">GULF OF CALIFORNIA</text>
+
+      <!-- Baja California peninsula -->
+      <path d="M120,55 L95,60 L55,120 L48,180 L60,230 L85,275 L105,250 L112,190 L118,120 Z"
+            fill="url(#landGrad)" stroke="var(--land-edge)" stroke-width="3" stroke-linejoin="round"/>
+
+      <!-- Mainland (incl. Yucatan) -->
+      <path d="M150,50 L430,60 L400,150 L378,235 L400,285 L455,275 L545,250 L570,295 L515,345
+               L425,355 L365,372 L300,350 L245,322 L195,288 L155,248 L140,200 L155,150 L170,100 Z"
+            fill="url(#landGrad)" stroke="var(--land-edge)" stroke-width="3" stroke-linejoin="round"/>
+
+      <!-- Roads -->
+      <g stroke="#d9caa3" stroke-width="2" stroke-dasharray="5,5" opacity="0.75">
+        <line id="road-tijuana-chihuahua" x1="100" y1="70" x2="250" y2="140"/>
+        <line id="road-chihuahua-guadalajara" x1="250" y1="140" x2="215" y2="225"/>
+        <line id="road-guadalajara-mexicocity" x1="215" y1="225" x2="290" y2="255"/>
+        <line id="road-mexicocity-veracruz" x1="290" y1="255" x2="360" y2="245"/>
+        <line id="road-mexicocity-oaxaca" x1="290" y1="255" x2="300" y2="320"/>
+        <line id="road-veracruz-oaxaca" x1="360" y1="245" x2="300" y2="320"/>
+        <line id="road-oaxaca-chiapas" x1="300" y1="320" x2="355" y2="355"/>
+        <line id="road-chiapas-merida" x1="355" y1="355" x2="530" y2="270"/>
+        <line id="road-veracruz-merida" x1="360" y1="245" x2="530" y2="270"/>
+      </g>
+    </svg>
+
+    <button class="node-btn" data-node="tijuana" style="left:16.7%; top:14%;">
+      <span class="node-dot"></span><span class="node-label">Tijuana</span>
+    </button>
+    <button class="node-btn" data-node="chihuahua" style="left:41.7%; top:28%;">
+      <span class="node-dot"></span><span class="node-label">Chihuahua</span>
+    </button>
+    <button class="node-btn" data-node="guadalajara" style="left:35.8%; top:45%;">
+      <span class="node-dot"></span><span class="node-label">Guadalajara</span>
+    </button>
+    <button class="node-btn" data-node="mexicocity" style="left:48.3%; top:51%;">
+      <span class="node-dot"></span><span class="node-label">Mexico City</span>
+    </button>
+    <button class="node-btn" data-node="veracruz" style="left:60%; top:49%;">
+      <span class="node-dot"></span><span class="node-label">Veracruz</span>
+    </button>
+    <button class="node-btn" data-node="oaxaca" style="left:50%; top:64%;">
+      <span class="node-dot"></span><span class="node-label">Oaxaca</span>
+    </button>
+    <button class="node-btn" data-node="chiapas" style="left:59.2%; top:71%;">
+      <span class="node-dot"></span><span class="node-label">Chiapas</span>
+    </button>
+    <button class="node-btn" data-node="merida" style="left:88.3%; top:54%;">
+      <span class="node-dot"></span><span class="node-label">Mérida</span>
+    </button>
+
+    <div id="player-token" style="left:16.7%; top:14%;">🚶</div>
   </div>
 
-  <div class="hint">Move with arrow keys / WASD, or the pad below.</div>
-  <div class="dpad">
-    <div class="spacer"></div><button data-dir="up">▲</button><div class="spacer"></div>
-    <button data-dir="left">◀</button><div class="spacer"></div><button data-dir="right">▶</button>
-    <div class="spacer"></div><button data-dir="down">▼</button><div class="spacer"></div>
-  </div>
+  <div class="hint">Tap a glowing city to travel the road there.</div>
+  <div class="dest-list" id="dest-list"></div>
 </div>
 
 <div class="toast" id="toast"></div>
@@ -302,90 +337,32 @@
 
 <script>
 (function(){
-  // Map legend: # wall, ~ water, . grass, M merchant, H hunter, C child, L lantern, D elder's door
-  const mapRows = [
-    "############",
-    "#..........#",
-    "#.M......H.#",
-    "#....###...#",
-    "#.L..###..D#",
-    "#....###...#",
-    "#.C........#",
-    "#....~~....#",
-    "############"
-  ];
-
-  let grid = mapRows.map(r => r.split(""));
-  const ROWS = grid.length, COLS = grid[0].length;
-
-  let state = {
-    x: 1, y: 1,
-    hp: 3, gold: 8, rep: 0,
-    hasLantern: false,
-    talked: { M:false, H:false, C:false },
-    childPromised: false,
-    dialogueOpen: false,
-    ended: false
+  const nodes = {
+    tijuana:    { name:"Tijuana",     x:100, y:70,  edges:["chihuahua"] },
+    chihuahua:  { name:"Chihuahua",   x:250, y:140, edges:["tijuana","guadalajara"] },
+    guadalajara:{ name:"Guadalajara", x:215, y:225, edges:["chihuahua","mexicocity"] },
+    mexicocity: { name:"Mexico City", x:290, y:255, edges:["guadalajara","veracruz","oaxaca"] },
+    veracruz:   { name:"Veracruz",    x:360, y:245, edges:["mexicocity","oaxaca","merida"] },
+    oaxaca:     { name:"Oaxaca",      x:300, y:320, edges:["mexicocity","veracruz","chiapas"] },
+    chiapas:    { name:"Chiapas",     x:355, y:355, edges:["oaxaca","merida"] },
+    merida:     { name:"Mérida",      x:530, y:270, edges:["chiapas","veracruz"], isGoal:true }
   };
 
-  const gridEl = document.getElementById('grid');
+  let state, visited;
+  function freshState(){
+    return { current:"tijuana", hp:3, pesos:15, rep:0, hasGift:false, dialogueOpen:false, ended:false };
+  }
+  state = freshState();
+  visited = new Set(["tijuana"]);
+
   const toastEl = document.getElementById('toast');
   const overlayEl = document.getElementById('overlay');
   const dlgName = document.getElementById('dlg-name');
   const dlgText = document.getElementById('dlg-text');
   const dlgChoices = document.getElementById('dlg-choices');
   const endOverlay = document.getElementById('end-overlay');
-
-  function tileIcon(ch){
-    switch(ch){
-      case '#': return '';
-      case '~': return '';
-      case 'M': return '🧑\u200d🌾';
-      case 'H': return '🏹';
-      case 'C': return '🧒';
-      case 'L': return '🏮';
-      case 'D': return '🚪';
-      default: return '';
-    }
-  }
-  function tileClass(ch){
-    switch(ch){
-      case '#': return 'tile-wall';
-      case '~': return 'tile-water';
-      case 'M': case 'H': case 'C': return 'tile-npc';
-      case 'L': return 'tile-item';
-      case 'D': return 'tile-goal';
-      default: return 'tile-grass';
-    }
-  }
-  function isInteractive(ch){
-    return ch === 'M' || ch === 'H' || ch === 'C' || ch === 'L' || ch === 'D';
-  }
-  function isObstacle(ch){
-    return ch === '#' || ch === '~';
-  }
-
-  function render(){
-    gridEl.innerHTML = '';
-    for(let y=0;y<ROWS;y++){
-      for(let x=0;x<COLS;x++){
-        const ch = grid[y][x];
-        const cell = document.createElement('div');
-        cell.className = 'cell ' + tileClass(ch);
-        if(x===state.x && y===state.y){
-          cell.innerHTML = '<span class="player">🧙</span>';
-        } else if(isInteractive(ch)){
-          const glowClass = (ch==='L') ? ' glow' : '';
-          cell.innerHTML = '<span class="'+glowClass.trim()+'">'+tileIcon(ch)+'</span>';
-        }
-        gridEl.appendChild(cell);
-      }
-    }
-    document.getElementById('stat-hp').textContent = state.hp;
-    document.getElementById('stat-gold').textContent = state.gold;
-    document.getElementById('stat-rep').textContent = state.rep;
-    document.getElementById('stat-lantern').textContent = state.hasLantern ? 'yes' : 'no';
-  }
+  const destList = document.getElementById('dest-list');
+  const playerToken = document.getElementById('player-token');
 
   let toastTimer = null;
   function showToast(msg){
@@ -409,7 +386,6 @@
     });
     overlayEl.classList.add('active');
   }
-
   function showResponse(name, text){
     dlgName.textContent = name;
     dlgText.textContent = text;
@@ -420,196 +396,165 @@
     btn.onclick = closeDialogue;
     dlgChoices.appendChild(btn);
   }
-
   function closeDialogue(){
     state.dialogueOpen = false;
     overlayEl.classList.remove('active');
     render();
   }
 
-  function talkMerchant(){
-    const first = !state.talked.M;
-    state.talked.M = true;
-    const intro = first
-      ? "A weathered merchant eyes your bag. \"Fancy some wares, traveler? Been dark round these parts lately.\""
-      : "\"Back again? Mind the shadows near the grove.\"";
-    openDialogue("MERCHANT", intro, [
-      {
-        label: "Buy a lantern (10 gold)",
-        action: () => {
-          if(state.hasLantern){
-            showResponse("MERCHANT", "\"You've already got a lantern, friend. One's plenty.\"");
-          } else if(state.gold >= 10){
-            state.gold -= 10;
-            state.hasLantern = true;
-            showResponse("MERCHANT", "He hands you a battered lantern, its flame flickering to life. \"Careful in the dark now.\"");
-          } else {
-            showResponse("MERCHANT", "\"Not enough coin, friend. Come back when you've got ten pieces.\"");
-          }
-        }
-      },
-      {
-        label: "Ask about the village",
-        action: () => {
-          showResponse("MERCHANT", "\"Wanderer's Hollow, they call it. Quiet, 'til the shadows started creeping out from the old grove.\"");
-        }
-      },
-      {
-        label: "Leave",
-        action: closeDialogue
-      }
-    ]);
-  }
-
-  function talkHunter(){
-    const first = !state.talked.H;
-    state.talked.H = true;
-    const intro = first
-      ? "A weathered hunter sizes you up. \"Not many folk pass through anymore. Wolves took to the grove after the light went out.\""
-      : "\"Still poking around? Suit yourself.\"";
-    openDialogue("HUNTER", intro, [
-      {
-        label: "Ask for advice",
-        action: () => {
-          state.rep += 1;
-          showResponse("HUNTER", "\"Keep your wits sharp and your feet quiet. And don't go into the grove without a light.\" (+1 Reputation)");
-        }
-      },
-      {
-        label: "Challenge him to an arm-wrestle",
-        action: () => {
-          if(Math.random() < 0.5){
-            state.gold += 5;
-            showResponse("HUNTER", "You slam his arm to the table. He laughs and tosses you a few coins. \"Fair enough.\" (+5 Gold)");
-          } else {
-            state.hp = Math.max(0, state.hp - 1);
-            showResponse("HUNTER", "He pins your arm easily. \"Ha! Try again sometime.\" (-1 HP)");
-          }
-        }
-      },
-      {
-        label: "Leave",
-        action: closeDialogue
-      }
-    ]);
-  }
-
-  function talkChild(){
-    const first = !state.talked.C;
-    state.talked.C = true;
-    if(!first){
-      openDialogue("CHILD", state.childPromised ? "\"Did you see my cat out there?\"" : "The child looks at you hopefully, then away.", [
-        { label: "Leave", action: closeDialogue }
+  const encounters = {
+    chihuahua(){
+      openDialogue("RANCHER", "A rancher leans against his truck, hat low against the sun. \"Long way from home, eh? Desert's not kind to strangers.\"", [
+        { label:"Trade a few pesos for water and jerky (-5)", action:() => {
+            if(state.pesos>=5){ state.pesos-=5; showResponse("RANCHER","He fills your canteen and wraps some dried meat. \"Keep your strength up.\""); }
+            else { showResponse("RANCHER","\"Come back when you've got a few pesos to spare.\""); }
+        }},
+        { label:"Ask about the road south", action:() => showResponse("RANCHER","\"Guadalajara's a few days on. Mind the heat at midday.\"") },
+        { label:"Leave", action: closeDialogue }
       ]);
-      return;
-    }
-    openDialogue("CHILD", "A small child tugs your sleeve. \"Have you seen my cat, mister? She ran off toward the grove and I'm scared to go after her.\"", [
-      {
-        label: "Promise to look for her",
-        action: () => {
-          state.rep += 1;
-          state.childPromised = true;
-          showResponse("CHILD", "\"Really? Thank you!\" (+1 Reputation) She points toward the dark trees at the edge of the map.");
-        }
-      },
-      {
-        label: "Say you're too busy",
-        action: () => {
-          state.rep -= 1;
-          showResponse("CHILD", "The child's face falls. She shuffles away without a word. (-1 Reputation)");
-        }
-      },
-      {
-        label: "Leave",
-        action: closeDialogue
-      }
-    ]);
-  }
-
-  function pickupLantern(x,y){
-    state.hasLantern = true;
-    grid[y][x] = '.';
-    showToast("You found a lantern! It might help you see through the dark grove ahead.");
-  }
-
-  function reachDoor(){
-    if(!state.hasLantern){
-      openDialogue("ELDER'S DOOR", "The door creaks open onto darkness. Without a light, you can't find your way inside. Perhaps a lantern would help.", [
-        { label: "Step back", action: closeDialogue }
+    },
+    guadalajara(){
+      openDialogue("MARIACHI", "A mariachi tunes his guitarrón in the plaza, sunlight catching the silver on his sombrero.", [
+        { label:"Toss a few coins in his case (-3)", action:() => {
+            if(state.pesos>=3){ state.pesos-=3; state.rep+=1; showResponse("MARIACHI","He breaks into a bright son jalisciense. A small crowd gathers. (+1 Reputation)"); }
+            else { showResponse("MARIACHI","\"Ah, another time then, amigo.\""); }
+        }},
+        { label:"Ask him for a song for your grandmother", action:() => showResponse("MARIACHI","He smiles and plays something slow and sweet. \"For the road,\" he says.") },
+        { label:"Leave", action: closeDialogue }
       ]);
-      return;
+    },
+    mexicocity(){
+      openDialogue("THE CITY", "The city roars around you, camiones and vendors and a thousand footsteps. A tourist stops you, map upside down in her hands. \"Excuse me, do you know the way to the Zócalo?\"", [
+        { label:"Walk her most of the way there", action:() => { state.rep+=1; showResponse("THE CITY","\"Thank you so much,\" she says, relieved. You lose a little time, but it feels right. (+1 Reputation)"); } },
+        { label:"Point vaguely and keep walking", action:() => { state.rep-=1; showResponse("THE CITY","She frowns and wanders off in the wrong direction. You feel a small pang of guilt. (-1 Reputation)"); } },
+        { label:"Buy a torta from a stand instead (-4)", action:() => {
+            if(state.pesos>=4){ state.pesos-=4; state.hp=Math.min(3,state.hp+1); showResponse("THE CITY","Best torta you've had in years. You feel steadier for the road ahead. (+1 HP)"); }
+            else { showResponse("THE CITY","\"Sorry, need a few more pesos for that one.\""); }
+        }}
+      ]);
+    },
+    veracruz(){
+      openDialogue("FISHERMAN", "An old fisherman mends his nets on the dock, the smell of salt and diesel in the air. \"Not many travelers come through here anymore,\" he says.", [
+        { label:"Listen to his stories of the sea", action:() => { state.rep+=1; showResponse("FISHERMAN","He tells you of storms and treasures and a shipwreck his grandfather swore was true. (+1 Reputation)"); } },
+        { label:"Buy fresh fish for the road (-5)", action:() => {
+            if(state.pesos>=5){ state.pesos-=5; showResponse("FISHERMAN","He wraps a fresh catch in paper. \"Cook it soon,\" he warns."); }
+            else { showResponse("FISHERMAN","\"Times are tight for both of us, eh?\""); }
+        }},
+        { label:"Leave", action: closeDialogue }
+      ]);
+    },
+    oaxaca(){
+      openDialogue("WEAVER", "A weaver sits before her loom in the market, threads of red and indigo flying between her fingers.", [
+        { label:"Admire her weaving and talk a while", action:() => { state.rep+=1; showResponse("WEAVER","She tells you the patterns are older than the town itself. (+1 Reputation)"); } },
+        { label:"Buy a woven bracelet for your grandmother (-6)", action:() => {
+            if(state.pesos>=6){ state.pesos-=6; state.hasGift=true; showResponse("WEAVER","She wraps it carefully. \"For someone special,\" she says. You tuck it beside the letter."); }
+            else { showResponse("WEAVER","\"Save your pesos for the road, traveler. Maybe next time.\""); }
+        }},
+        { label:"Leave", action: closeDialogue }
+      ]);
+    },
+    chiapas(){
+      openDialogue("GUIDE", "A guide rests near the tree line, ruins just visible through the canopy behind him. \"Rain's coming. You should keep moving, but the ruins are worth a look if you've got a moment.\"", [
+        { label:"Take a moment to see the ruins", action:() => { state.rep+=1; showResponse("GUIDE","Stone faces stare down at you from the trees, worn soft by centuries of rain. (+1 Reputation)"); } },
+        { label:"Press on, no time to spare", action:() => showResponse("GUIDE","\"Suit yourself,\" he shrugs, and points you toward the road south.") },
+        { label:"Leave", action: closeDialogue }
+      ]);
     }
+  };
+
+  function reachEnding(){
     state.ended = true;
     let title, text;
-    if(state.rep >= 2){
-      title = "A WARM WELCOME";
-      text = "The Elder welcomes you in, lantern light dancing in her eyes. \"You've looked after this village well,\" she says. \"The grove will settle now that its people are cared for.\"";
-    } else if(state.rep >= 0){
-      title = "A QUIET ARRIVAL";
-      text = "The Elder greets you with a cautious nod. \"You found your way here, at least,\" she says. \"The village will need more than that, in time.\"";
+    if(state.rep >= 4 && state.hasGift){
+      title = "WELCOMED HOME";
+      text = "Grandmother's door opens before you can even knock. \"I heard you were coming,\" she laughs, pulling you into a hug that smells of cinnamon and dust. You hand her the letter, and the little bracelet besides. She holds both to her chest like they're the most precious things in the world. The whole road down here, it seems, was worth every step.";
+    } else if(state.rep >= 2){
+      title = "THE LETTER ARRIVES";
+      text = "Grandmother opens the door and you hand her the letter, road-worn but intact. She reads it slowly, smiling at something only she understands, then looks up at you. \"You came all this way,\" she says softly. \"Sit. Tell me everything.\"";
     } else {
-      title = "A COLD RECEPTION";
-      text = "The Elder studies you for a long moment. \"Word travels fast in a small place,\" she says quietly, and says little else.";
+      title = "A QUIET ARRIVAL";
+      text = "Grandmother takes the letter with quiet hands. \"Long trip,\" she says, studying your tired face. She doesn't ask about the journey, not yet. There will be time for that, now that you're finally here.";
     }
     document.getElementById('end-title').textContent = title;
     document.getElementById('end-text').textContent = text;
     document.getElementById('end-stats').textContent =
-      "HP: " + state.hp + "   Gold: " + state.gold + "   Reputation: " + state.rep +
-      (state.childPromised ? "   (You kept your promise to the child.)" : "");
+      "HP: " + state.hp + "   Pesos: " + state.pesos + "   Reputation: " + state.rep +
+      (state.hasGift ? "   (You carried a gift for her too.)" : "");
     endOverlay.classList.add('active');
   }
 
-  function handleTile(x,y){
-    const ch = grid[y][x];
-    if(ch === 'M') talkMerchant();
-    else if(ch === 'H') talkHunter();
-    else if(ch === 'C') talkChild();
-    else if(ch === 'L') pickupLantern(x,y);
-    else if(ch === 'D') reachDoor();
+  function arrive(id){
+    if(id === 'merida'){ reachEnding(); render(); return; }
+    if(!visited.has(id)){
+      visited.add(id);
+      if(encounters[id]) encounters[id]();
+    } else {
+      showToast("Nothing new here for now. The road continues.");
+    }
+    render();
   }
 
-  function move(dir){
+  function travelTo(id){
     if(state.dialogueOpen || state.ended) return;
-    let nx = state.x, ny = state.y;
-    if(dir === 'up') ny -= 1;
-    if(dir === 'down') ny += 1;
-    if(dir === 'left') nx -= 1;
-    if(dir === 'right') nx += 1;
-    if(nx < 0 || nx >= COLS || ny < 0 || ny >= ROWS) return;
-    const target = grid[ny][nx];
-    if(isObstacle(target)){
-      showToast(target === '~' ? "The water's too deep to cross here." : "Too dense to push through.");
+    const cur = nodes[state.current];
+    if(!cur.edges.includes(id)){
+      showToast("No direct road runs there from here.");
       return;
     }
-    state.x = nx; state.y = ny;
+    state.current = id;
+    positionToken(id);
+    setTimeout(() => arrive(id), 350);
     render();
-    handleTile(nx, ny);
   }
 
-  document.addEventListener('keydown', (e) => {
-    const map = { ArrowUp:'up', ArrowDown:'down', ArrowLeft:'left', ArrowRight:'right',
-                  w:'up', s:'down', a:'left', d:'right', W:'up', S:'down', A:'left', D:'right' };
-    if(map[e.key]){
-      e.preventDefault();
-      move(map[e.key]);
-    }
-  });
+  function positionToken(id){
+    const n = nodes[id];
+    playerToken.style.left = (n.x/600*100) + '%';
+    playerToken.style.top = (n.y/500*100) + '%';
+  }
 
-  document.querySelectorAll('.dpad button[data-dir]').forEach(btn => {
-    btn.addEventListener('click', () => move(btn.getAttribute('data-dir')));
+  function render(){
+    document.getElementById('stat-hp').textContent = state.hp;
+    document.getElementById('stat-pesos').textContent = state.pesos;
+    document.getElementById('stat-rep').textContent = state.rep;
+    document.getElementById('stat-gift').textContent = state.hasGift ? 'yes' : 'no';
+
+    const curEdges = nodes[state.current].edges;
+    document.querySelectorAll('.node-btn').forEach(btn => {
+      const id = btn.getAttribute('data-node');
+      btn.classList.remove('current','reachable','visited');
+      if(id === state.current) btn.classList.add('current');
+      else if(curEdges.includes(id)) btn.classList.add('reachable');
+      else if(visited.has(id)) btn.classList.add('visited');
+    });
+
+    destList.innerHTML = '';
+    curEdges.forEach(id => {
+      const btn = document.createElement('button');
+      btn.className = 'dest-btn';
+      btn.textContent = 'Travel to ' + nodes[id].name;
+      btn.onclick = () => travelTo(id);
+      destList.appendChild(btn);
+    });
+  }
+
+  document.querySelectorAll('.node-btn').forEach(btn => {
+    btn.addEventListener('click', () => travelTo(btn.getAttribute('data-node')));
   });
 
   document.getElementById('restart-btn').addEventListener('click', () => {
-    grid = mapRows.map(r => r.split(""));
-    state = {
-      x:1, y:1, hp:3, gold:8, rep:0, hasLantern:false,
-      talked:{M:false,H:false,C:false}, childPromised:false,
-      dialogueOpen:false, ended:false
-    };
+    state = freshState();
+    visited = new Set(["tijuana"]);
+    positionToken('tijuana');
     endOverlay.classList.remove('active');
     render();
   });
 
+  // Intro
+  openDialogue("YOUR JOURNEY BEGINS", "You stand in Tijuana, your grandmother's letter tucked safe in your bag. Mérida is a long road south. Time to go.", [
+    { label:"Begin the journey", action: closeDialogue }
+  ]);
+  positionToken('tijuana');
   render();
 })();
 </script>

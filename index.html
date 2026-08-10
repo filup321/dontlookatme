@@ -3,173 +3,200 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>El Camino a Mérida</title>
+<title>1810: El Camino a la Independencia</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=VT323&display=swap" rel="stylesheet">
 <style>
   :root{
-    --ink:#141f19;
-    --ink-deep:#0d1611;
-    --moss:#3f5c42;
-    --moss-light:#5a7d5e;
-    --parchment:#ece0c2;
-    --parchment-dim:#d9caa3;
+    --ink:#1f150e;
+    --ink-deep:#140d08;
+    --leather:#5a3a24;
+    --leather-light:#7a5230;
+    --parchment:#ecdfc0;
+    --parchment-dim:#d8c79c;
     --amber:#d99a3f;
     --amber-glow:#f0b968;
     --rust:#a4402f;
-    --ocean:#12303a;
-    --ocean-deep:#0a2028;
-    --land:#5c7a4c;
-    --land-edge:#33481f;
+    --plaza:#c9a468;
+    --plaza-line:rgba(90,58,36,0.28);
+    --stone:#8a8577;
     --text-dark:#2b2318;
-    --text-light:#f2ecd8;
+    --text-light:#f5ecd8;
   }
   *{box-sizing:border-box;}
   html,body{margin:0;padding:0;}
   body{
-    background:radial-gradient(ellipse at 50% 0%, #1c2b21 0%, var(--ink) 55%, var(--ink-deep) 100%);
+    background:radial-gradient(ellipse at 50% 0%, #2b1e13 0%, var(--ink) 55%, var(--ink-deep) 100%);
     min-height:100vh;
-    display:flex;
-    align-items:center;
-    justify-content:center;
+    display:flex; align-items:center; justify-content:center;
     font-family:'VT323', monospace;
     color:var(--text-light);
-    padding:24px 12px;
+    padding:20px 12px;
   }
-  .game-wrap{
-    width:100%;
-    max-width:640px;
-    display:flex;
-    flex-direction:column;
-    align-items:center;
-    gap:12px;
-  }
+  .screen{ display:none; width:100%; max-width:640px; flex-direction:column; align-items:center; gap:16px; }
+  .screen.active{ display:flex; }
+
   h1{
     font-family:'Press Start 2P', monospace;
-    font-size:15px;
-    letter-spacing:1px;
+    font-size:16px; letter-spacing:1px;
     color:var(--amber-glow);
     text-shadow:0 0 12px rgba(217,154,63,0.45), 0 2px 0 #000;
-    margin:4px 0 0 0;
-    text-align:center;
+    margin:4px 0 0 0; text-align:center;
   }
-  .subtitle{
-    font-size:16px;
-    color:var(--parchment-dim);
-    margin-top:-6px;
-    text-align:center;
+  .btn{
+    font-family:'Press Start 2P', monospace;
+    font-size:13px;
+    background:var(--rust);
+    color:var(--text-light);
+    border:2px solid #6e281c;
+    border-radius:6px;
+    padding:13px 22px;
+    cursor:pointer;
+    box-shadow:0 4px 0 rgba(0,0,0,0.4);
   }
-  .stats-bar{
-    width:100%;
-    display:flex;
-    justify-content:space-between;
+  .btn:hover{ filter:brightness(1.1); }
+  .btn:active{ transform:translateY(2px); box-shadow:0 2px 0 rgba(0,0,0,0.4); }
+
+  /* --- LOADING SCREEN --- */
+  #screen-loading .panel{
     background:var(--parchment);
     color:var(--text-dark);
-    border:3px solid var(--moss);
-    border-radius:6px;
-    padding:8px 12px;
-    font-size:18px;
+    border:4px solid var(--amber);
+    border-radius:8px;
+    padding:30px 26px;
+    box-shadow:0 8px 0 rgba(0,0,0,0.4);
+    text-align:center;
+  }
+  #screen-loading .panel p{ font-size:21px; line-height:1.5; margin:0 0 14px 0; }
+  #screen-loading .panel p:last-of-type{ margin-bottom:22px; }
+  #screen-loading .greeting{
+    font-family:'Press Start 2P', monospace;
+    font-size:13px;
+    color:var(--rust);
+    margin-bottom:16px;
+    line-height:1.8;
+  }
+
+  /* --- CHARACTER SELECT --- */
+  .subtitle{ font-size:17px; color:var(--parchment-dim); text-align:center; margin-top:-8px; }
+  .role-list{ display:flex; gap:16px; flex-wrap:wrap; justify-content:center; width:100%; }
+  .role-card{
+    background:var(--parchment);
+    color:var(--text-dark);
+    border:3px solid var(--leather);
+    border-radius:8px;
+    padding:16px 14px;
+    width:150px;
+    display:flex; flex-direction:column; align-items:center; gap:10px;
+    cursor:pointer;
+    box-shadow:0 5px 0 rgba(0,0,0,0.35);
+    transition:transform 0.12s ease;
+  }
+  .role-card:hover{ transform:translateY(-3px); border-color:var(--amber); }
+  .role-portrait{
+    width:80px; height:80px; border-radius:50%;
+    background:var(--parchment-dim);
+    border:3px solid var(--amber);
+    display:flex; align-items:center; justify-content:center;
+    font-size:38px;
+  }
+  .role-name{ font-family:'Press Start 2P', monospace; font-size:11px; color:var(--rust); text-align:center; }
+  .role-desc{ font-size:16px; text-align:center; line-height:1.3; color:#4a3d24; }
+
+  /* --- TRANSITION --- */
+  #screen-transition .panel{
+    background:var(--parchment); color:var(--text-dark);
+    border:4px solid var(--amber); border-radius:8px;
+    padding:34px 26px; text-align:center;
+    box-shadow:0 8px 0 rgba(0,0,0,0.4);
+  }
+  #screen-transition .panel p{ font-size:23px; margin:0 0 22px 0; }
+
+  /* --- GAME SCREEN --- */
+  .stats-bar{
+    width:100%; display:flex; justify-content:space-between; flex-wrap:wrap; gap:6px;
+    background:var(--parchment); color:var(--text-dark);
+    border:3px solid var(--leather); border-radius:6px;
+    padding:8px 12px; font-size:17px;
     box-shadow:0 4px 0 rgba(0,0,0,0.35);
   }
-  .stat{display:flex;align-items:center;gap:5px;}
+  .stat{ display:flex; align-items:center; gap:5px; }
 
   .map-shell{
-    position:relative;
-    width:100%;
-    aspect-ratio:600/500;
-    border:4px solid var(--moss);
+    position:relative; width:100%;
+    border:5px solid var(--leather);
     border-radius:6px;
-    overflow:hidden;
-    box-shadow:0 6px 0 rgba(0,0,0,0.4), inset 0 0 40px rgba(0,0,0,0.5);
-    background:var(--ocean);
+    box-shadow:0 6px 0 rgba(0,0,0,0.4), inset 0 0 30px rgba(0,0,0,0.45);
+    background:
+      repeating-linear-gradient(0deg, var(--plaza-line) 0, var(--plaza-line) 1px, transparent 1px, transparent calc(100%/9)),
+      repeating-linear-gradient(90deg, var(--plaza-line) 0, var(--plaza-line) 1px, transparent 1px, transparent calc(100%/12)),
+      var(--plaza);
+    padding:4px;
   }
-  .map-shell svg{ position:absolute; inset:0; width:100%; height:100%; }
-  .ocean-label{
-    font-family:'VT323', monospace;
-    fill:#4f7c8c;
-    font-size:13px;
-    letter-spacing:2px;
-    opacity:0.8;
+  #town-grid{
+    display:grid;
+    grid-template-columns:repeat(12, 1fr);
+    grid-template-rows:repeat(9, 1fr);
+    gap:0;
+    width:100%;
+    aspect-ratio:12/9;
   }
+  .building{
+    border-radius:4px;
+    border:2px solid rgba(0,0,0,0.35);
+    display:flex; flex-direction:column; align-items:center; justify-content:center;
+    position:relative;
+    box-shadow:inset 0 0 10px rgba(0,0,0,0.25);
+  }
+  .building .b-label{
+    font-size:min(2.6vw, 13px);
+    color:var(--text-dark);
+    text-align:center;
+    line-height:1.05;
+    padding:2px;
+    text-shadow:0 1px 0 rgba(255,255,255,0.25);
+  }
+  .b-iglesia{ background:#e6dcc4; }
+  .b-alcalde{ background:#d8cdb0; }
+  .b-stable{ background:#7a5230; }
+  .b-tavern{ background:#8c4a2f; }
+  .b-policia{ background:#8a8577; }
+  .b-mercado{ background:#c98a3a; }
 
-  .node-btn{
-    position:absolute;
-    transform:translate(-50%,-50%);
-    display:flex;
-    flex-direction:column;
-    align-items:center;
-    gap:2px;
-    background:none;
-    border:none;
+  .door{
+    display:flex; align-items:center; justify-content:center;
+    font-size:min(3.4vw, 18px);
+    border-radius:3px;
     cursor:pointer;
-    padding:0;
-    z-index:3;
+    background:rgba(217,154,63,0.35);
+    box-shadow:0 0 0 2px var(--amber-glow) inset;
+    animation:doorPulse 1.5s ease-in-out infinite;
   }
-  .node-dot{
-    width:14px; height:14px;
-    border-radius:50%;
-    background:var(--parchment-dim);
-    border:2px solid var(--land-edge);
-  }
-  .node-label{
-    font-size:13px;
-    color:var(--text-light);
-    text-shadow:0 1px 2px #000, 0 0 4px rgba(0,0,0,0.8);
-    white-space:nowrap;
-  }
-  .node-btn.current .node-dot{
-    background:var(--amber-glow);
-    border-color:var(--amber);
-    box-shadow:0 0 10px 3px rgba(240,185,104,0.7);
-  }
-  .node-btn.current .node-label{ color:var(--amber-glow); font-weight:bold; }
-  .node-btn.reachable .node-dot{
-    animation:pulseDot 1.4s ease-in-out infinite;
-  }
-  .node-btn.visited .node-dot{
-    background:var(--moss-light);
-    border-color:#1f3320;
-  }
-  @keyframes pulseDot{
-    0%,100%{ box-shadow:0 0 0 0 rgba(217,154,63,0.55); }
-    50%{ box-shadow:0 0 0 6px rgba(217,154,63,0); }
+  @keyframes doorPulse{
+    0%,100%{ box-shadow:0 0 0 2px var(--amber-glow) inset; }
+    50%{ box-shadow:0 0 0 4px var(--amber-glow) inset; }
   }
 
   #player-token{
-    position:absolute;
-    transform:translate(-50%,-90%);
-    font-size:22px;
-    filter:drop-shadow(0 0 5px rgba(255,255,255,0.6));
-    transition:left 0.6s ease, top 0.6s ease;
-    z-index:4;
-    pointer-events:none;
+    display:flex; align-items:center; justify-content:center;
+    font-size:min(4.2vw, 22px);
+    filter:drop-shadow(0 0 5px rgba(255,255,255,0.7));
+    z-index:5;
   }
-
-  .dest-list{
-    width:100%;
-    display:flex;
-    flex-wrap:wrap;
-    gap:8px;
-    justify-content:center;
-  }
-  .dest-btn{
-    font-family:'VT323', monospace;
-    font-size:17px;
-    background:var(--moss);
-    color:var(--text-light);
-    border:2px solid #274428;
-    border-radius:6px;
-    padding:7px 12px;
-    cursor:pointer;
-  }
-  .dest-btn:hover{ background:var(--moss-light); }
-  .dest-btn:disabled{ opacity:0.4; cursor:default; }
 
   .hint{ font-size:15px; color:var(--parchment-dim); text-align:center; }
+  .dpad{ display:grid; grid-template-columns:repeat(3, 46px); grid-template-rows:repeat(3, 46px); gap:4px; }
+  .dpad button{
+    font-family:'VT323', monospace; font-size:20px;
+    background:var(--leather); color:var(--text-light);
+    border:2px solid #3a2314; border-radius:6px; cursor:pointer;
+  }
+  .dpad button:active{ background:var(--leather-light); }
+  .dpad .spacer{ visibility:hidden; }
 
+  /* Dialogue overlay */
   .overlay{
-    position:fixed; inset:0;
-    background:rgba(10,15,11,0.72);
+    position:fixed; inset:0; background:rgba(10,8,6,0.72);
     display:none; align-items:flex-end; justify-content:center;
     padding:18px; z-index:10;
   }
@@ -178,23 +205,21 @@
     width:100%; max-width:560px;
     background:var(--parchment); color:var(--text-dark);
     border:4px solid var(--amber); border-radius:8px;
-    padding:18px 20px;
-    box-shadow:0 8px 0 rgba(0,0,0,0.4);
+    padding:18px 20px; box-shadow:0 8px 0 rgba(0,0,0,0.4);
     font-size:20px; line-height:1.4;
   }
   .dialogue-name{
-    font-family:'Press Start 2P', monospace;
-    font-size:11px; color:var(--rust);
-    margin-bottom:8px; letter-spacing:0.5px;
+    font-family:'Press Start 2P', monospace; font-size:11px;
+    color:var(--rust); margin-bottom:8px; letter-spacing:0.5px;
   }
   .dialogue-text{ margin-bottom:14px; min-height:44px; }
   .choices{ display:flex; flex-direction:column; gap:8px; }
   .choice-btn{
     font-family:'VT323', monospace; font-size:19px; text-align:left;
-    background:var(--moss); color:var(--text-light);
-    border:2px solid #274428; border-radius:5px; padding:9px 12px; cursor:pointer;
+    background:var(--leather); color:var(--text-light);
+    border:2px solid #3a2314; border-radius:5px; padding:9px 12px; cursor:pointer;
   }
-  .choice-btn:hover{ background:var(--moss-light); }
+  .choice-btn:hover{ background:var(--leather-light); }
   .continue-btn{
     font-family:'VT323', monospace; font-size:19px;
     background:var(--amber); color:#2b1c0a;
@@ -211,109 +236,101 @@
     transition:opacity 0.25s ease, transform 0.25s ease;
   }
   .toast.show{ opacity:1; transform:translateX(-50%) translateY(6px); }
-
-  .end-overlay{
-    position:fixed; inset:0;
-    background:rgba(5,8,6,0.88);
-    display:none; align-items:center; justify-content:center;
-    padding:20px; z-index:30;
-  }
-  .end-overlay.active{ display:flex; }
-  .end-box{
-    max-width:480px; background:var(--parchment); color:var(--text-dark);
-    border:4px solid var(--amber); border-radius:8px;
-    padding:26px; text-align:center;
-    box-shadow:0 8px 0 rgba(0,0,0,0.4);
-  }
-  .end-title{ font-family:'Press Start 2P', monospace; font-size:15px; color:var(--rust); margin-bottom:14px; }
-  .end-text{ font-size:20px; line-height:1.4; margin-bottom:18px; }
-  .end-stats{ font-size:17px; margin-bottom:18px; color:#4a3d24; }
-  .restart-btn{
-    font-family:'Press Start 2P', monospace; font-size:12px;
-    background:var(--rust); color:var(--text-light);
-    border:2px solid #6e281c; border-radius:6px;
-    padding:12px 18px; cursor:pointer;
-  }
 </style>
 </head>
 <body>
 
-<div class="game-wrap">
-  <h1>EL CAMINO A MÉRIDA</h1>
-  <div class="subtitle">A journey south, your grandmother's letter in hand.</div>
+<!-- SCREEN 1: LOADING -->
+<div class="screen active" id="screen-loading">
+  <div class="panel">
+    <div class="greeting">¡BUENOS DÍAS, AMIGO!<br>BIENVENIDOS A MÉXICO</div>
+    <p>The year is 1810, and the great nation of Mexico is at a turning point.</p>
+    <p>Many seek independence, but not all agree on what that means.</p>
+    <p>The decisions you make here will influence the fate of this great nation.</p>
+    <p><em>Let's begin.</em></p>
+    <button class="btn" id="btn-vamos">VAMOS</button>
+  </div>
+</div>
 
+<!-- SCREEN 2: CHARACTER SELECT -->
+<div class="screen" id="screen-select">
+  <h1>CHOOSE YOUR STARTING PATH</h1>
+  <div class="subtitle">Who are you, in this year of 1810?</div>
+  <div class="role-list">
+    <div class="role-card" data-role="priest">
+      <div class="role-portrait">✝️</div>
+      <div class="role-name">PRIEST</div>
+      <div class="role-desc">El Cura. Trusted by the people, bound to the Church.</div>
+    </div>
+    <div class="role-card" data-role="farmer">
+      <div class="role-portrait">🧑‍🌾</div>
+      <div class="role-name">FARMER</div>
+      <div class="role-desc">El Campesino. Hardy and close to the land and its people.</div>
+    </div>
+    <div class="role-card" data-role="politico">
+      <div class="role-portrait">🏛️</div>
+      <div class="role-name">POLÍTICO</div>
+      <div class="role-desc">El Político. Well-connected, comfortable, watched closely.</div>
+    </div>
+  </div>
+</div>
+
+<!-- SCREEN 3: TRANSITION -->
+<div class="screen" id="screen-transition">
+  <div class="panel">
+    <p id="transition-text">We begin our journey in Tijuana.</p>
+    <button class="btn" id="btn-enter-town">ENTER TOWN</button>
+  </div>
+</div>
+
+<!-- SCREEN 4: GAME -->
+<div class="screen" id="screen-game">
+  <h1 style="font-size:13px;">TIJUANA, 1810</h1>
   <div class="stats-bar">
     <div class="stat">♥ <b id="stat-hp">3</b></div>
-    <div class="stat">$ <b id="stat-pesos">15</b></div>
-    <div class="stat">☆ <b id="stat-rep">0</b></div>
-    <div class="stat">🎁 <b id="stat-gift">no</b></div>
+    <div class="stat">🪙 <b id="stat-reales">10</b></div>
+    <div class="stat">⚖️ <b id="stat-causa">Neutral</b></div>
+    <div class="stat" id="stat-role-wrap">🎭 <b id="stat-role">-</b></div>
   </div>
 
   <div class="map-shell">
-    <svg viewBox="0 0 600 500" preserveAspectRatio="xMidYMid meet">
-      <defs>
-        <radialGradient id="landGrad" cx="45%" cy="35%" r="75%">
-          <stop offset="0%" stop-color="#6d8c5b"/>
-          <stop offset="100%" stop-color="#4c6b42"/>
-        </radialGradient>
-      </defs>
-      <text x="30" y="250" class="ocean-label" transform="rotate(-90 30 250)">PACIFIC OCEAN</text>
-      <text x="470" y="150" class="ocean-label">GULF OF MEXICO</text>
-      <text x="120" y="140" class="ocean-label" transform="rotate(-70 120 140)">GULF OF CALIFORNIA</text>
+    <div id="town-grid">
+      <div class="building b-iglesia" style="grid-column:5 / span 3; grid-row:1 / span 2;">
+        <span class="b-label">Iglesia</span>
+      </div>
+      <div class="building b-alcalde" style="grid-column:9 / span 2; grid-row:1 / span 2;">
+        <span class="b-label">Casa del Alcalde</span>
+      </div>
+      <div class="building b-stable" style="grid-column:1 / span 3; grid-row:4 / span 2;">
+        <span class="b-label">Puesto de Caballos</span>
+      </div>
+      <div class="building b-tavern" style="grid-column:5 / span 3; grid-row:4 / span 2;">
+        <span class="b-label">Bar Restaurante</span>
+      </div>
+      <div class="building b-policia" style="grid-column:9 / span 3; grid-row:4 / span 2;">
+        <span class="b-label">Policía</span>
+      </div>
+      <div class="building b-mercado" style="grid-column:1 / span 3; grid-row:7 / span 2;">
+        <span class="b-label">Mercado</span>
+      </div>
 
-      <!-- Baja California peninsula -->
-      <path d="M120,55 L95,60 L55,120 L48,180 L60,230 L85,275 L105,250 L112,190 L118,120 Z"
-            fill="url(#landGrad)" stroke="var(--land-edge)" stroke-width="3" stroke-linejoin="round"/>
+      <div class="door" id="door-iglesia" style="grid-column:6 / span 1; grid-row:2 / span 1;">⛪</div>
+      <div class="door" id="door-alcalde" style="grid-column:9 / span 1; grid-row:2 / span 1;">🏛️</div>
+      <div class="door" id="door-stable" style="grid-column:2 / span 1; grid-row:5 / span 1;">🐎</div>
+      <div class="door" id="door-tavern" style="grid-column:6 / span 1; grid-row:5 / span 1;">🍷</div>
+      <div class="door" id="door-policia" style="grid-column:10 / span 1; grid-row:5 / span 1;">🪖</div>
+      <div class="door" id="door-mercado" style="grid-column:2 / span 1; grid-row:8 / span 1;">🌽</div>
 
-      <!-- Mainland (incl. Yucatan) -->
-      <path d="M150,50 L430,60 L400,150 L378,235 L400,285 L455,275 L545,250 L570,295 L515,345
-               L425,355 L365,372 L300,350 L245,322 L195,288 L155,248 L140,200 L155,150 L170,100 Z"
-            fill="url(#landGrad)" stroke="var(--land-edge)" stroke-width="3" stroke-linejoin="round"/>
-
-      <!-- Roads -->
-      <g stroke="#d9caa3" stroke-width="2" stroke-dasharray="5,5" opacity="0.75">
-        <line id="road-tijuana-chihuahua" x1="100" y1="70" x2="250" y2="140"/>
-        <line id="road-chihuahua-guadalajara" x1="250" y1="140" x2="215" y2="225"/>
-        <line id="road-guadalajara-mexicocity" x1="215" y1="225" x2="290" y2="255"/>
-        <line id="road-mexicocity-veracruz" x1="290" y1="255" x2="360" y2="245"/>
-        <line id="road-mexicocity-oaxaca" x1="290" y1="255" x2="300" y2="320"/>
-        <line id="road-veracruz-oaxaca" x1="360" y1="245" x2="300" y2="320"/>
-        <line id="road-oaxaca-chiapas" x1="300" y1="320" x2="355" y2="355"/>
-        <line id="road-chiapas-merida" x1="355" y1="355" x2="530" y2="270"/>
-        <line id="road-veracruz-merida" x1="360" y1="245" x2="530" y2="270"/>
-      </g>
-    </svg>
-
-    <button class="node-btn" data-node="tijuana" style="left:16.7%; top:14%;">
-      <span class="node-dot"></span><span class="node-label">Tijuana</span>
-    </button>
-    <button class="node-btn" data-node="chihuahua" style="left:41.7%; top:28%;">
-      <span class="node-dot"></span><span class="node-label">Chihuahua</span>
-    </button>
-    <button class="node-btn" data-node="guadalajara" style="left:35.8%; top:45%;">
-      <span class="node-dot"></span><span class="node-label">Guadalajara</span>
-    </button>
-    <button class="node-btn" data-node="mexicocity" style="left:48.3%; top:51%;">
-      <span class="node-dot"></span><span class="node-label">Mexico City</span>
-    </button>
-    <button class="node-btn" data-node="veracruz" style="left:60%; top:49%;">
-      <span class="node-dot"></span><span class="node-label">Veracruz</span>
-    </button>
-    <button class="node-btn" data-node="oaxaca" style="left:50%; top:64%;">
-      <span class="node-dot"></span><span class="node-label">Oaxaca</span>
-    </button>
-    <button class="node-btn" data-node="chiapas" style="left:59.2%; top:71%;">
-      <span class="node-dot"></span><span class="node-label">Chiapas</span>
-    </button>
-    <button class="node-btn" data-node="merida" style="left:88.3%; top:54%;">
-      <span class="node-dot"></span><span class="node-label">Mérida</span>
-    </button>
-
-    <div id="player-token" style="left:16.7%; top:14%;">🚶</div>
+      <div id="player-token" style="grid-column:6 / span 1; grid-row:9 / span 1;">🚶</div>
+    </div>
   </div>
 
-  <div class="hint">Tap a glowing city to travel the road there.</div>
-  <div class="dest-list" id="dest-list"></div>
+  <div class="hint">Move with arrow keys / WASD, or the pad below. Walk onto a glowing door to enter.</div>
+  <div class="dpad">
+    <div class="spacer"></div><button data-dir="up">▲</button><div class="spacer"></div>
+    <button data-dir="left">◀</button><div class="spacer"></div><button data-dir="right">▶</button>
+    <div class="spacer"></div><button data-dir="down">▼</button><div class="spacer"></div>
+  </div>
 </div>
 
 <div class="toast" id="toast"></div>
@@ -326,44 +343,92 @@
   </div>
 </div>
 
-<div class="end-overlay" id="end-overlay">
-  <div class="end-box">
-    <div class="end-title" id="end-title">THE END</div>
-    <div class="end-text" id="end-text"></div>
-    <div class="end-stats" id="end-stats"></div>
-    <button class="restart-btn" id="restart-btn">PLAY AGAIN</button>
-  </div>
-</div>
-
 <script>
 (function(){
-  const nodes = {
-    tijuana:    { name:"Tijuana",     x:100, y:70,  edges:["chihuahua"] },
-    chihuahua:  { name:"Chihuahua",   x:250, y:140, edges:["tijuana","guadalajara"] },
-    guadalajara:{ name:"Guadalajara", x:215, y:225, edges:["chihuahua","mexicocity"] },
-    mexicocity: { name:"Mexico City", x:290, y:255, edges:["guadalajara","veracruz","oaxaca"] },
-    veracruz:   { name:"Veracruz",    x:360, y:245, edges:["mexicocity","oaxaca","merida"] },
-    oaxaca:     { name:"Oaxaca",      x:300, y:320, edges:["mexicocity","veracruz","chiapas"] },
-    chiapas:    { name:"Chiapas",     x:355, y:355, edges:["oaxaca","merida"] },
-    merida:     { name:"Mérida",      x:530, y:270, edges:["chiapas","veracruz"], isGoal:true }
+
+  // ---------- SCREEN NAVIGATION ----------
+  function showScreen(id){
+    document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+    document.getElementById(id).classList.add('active');
+  }
+
+  document.getElementById('btn-vamos').addEventListener('click', () => showScreen('screen-select'));
+
+  document.querySelectorAll('.role-card').forEach(card => {
+    card.addEventListener('click', () => {
+      selectRole(card.getAttribute('data-role'));
+      showScreen('screen-transition');
+    });
+  });
+
+  document.getElementById('btn-enter-town').addEventListener('click', () => {
+    showScreen('screen-game');
+    render();
+  });
+
+  // ---------- STATE ----------
+  const ROLE_CONFIG = {
+    priest:   { label:"Priest",   hp:3, reales:10 },
+    farmer:   { label:"Farmer",   hp:4, reales:6  },
+    politico: { label:"Político", hp:3, reales:14 }
   };
 
-  let state, visited;
-  function freshState(){
-    return { current:"tijuana", hp:3, pesos:15, rep:0, hasGift:false, dialogueOpen:false, ended:false };
+  let state = {
+    role: "priest",
+    maxHp: 3, hp: 3,
+    reales: 10,
+    causa: 0,
+    hasHorse: false,
+    dialogueOpen: false,
+    visited: {}
+  };
+
+  function selectRole(role){
+    const cfg = ROLE_CONFIG[role];
+    state.role = role;
+    state.maxHp = cfg.hp;
+    state.hp = cfg.hp;
+    state.reales = cfg.reales;
+    state.causa = 0;
+    state.hasHorse = false;
+    state.visited = {};
+    document.getElementById('stat-role').textContent = cfg.label;
   }
-  state = freshState();
-  visited = new Set(["tijuana"]);
+
+  function causaLabel(v){
+    if(v <= -3) return "Royalist";
+    if(v <= -1) return "Leaning Royalist";
+    if(v === 0) return "Neutral";
+    if(v <= 2) return "Leaning Insurgent";
+    return "Insurgent";
+  }
+
+  // ---------- MAP / MOVEMENT ----------
+  const COLS = 12, ROWS = 9;
+  let player = { col:6, row:9 };
+
+  // buildings: footprint blocked except door cell
+  const buildings = [
+    { id:"iglesia", col:5, row:1, w:3, h:2, doorCol:6, doorRow:2 },
+    { id:"alcalde", col:9, row:1, w:2, h:2, doorCol:9, doorRow:2 },
+    { id:"stable",  col:1, row:4, w:3, h:2, doorCol:2, doorRow:5 },
+    { id:"tavern",  col:5, row:4, w:3, h:2, doorCol:6, doorRow:5 },
+    { id:"policia", col:9, row:4, w:3, h:2, doorCol:10, doorRow:5 },
+    { id:"mercado", col:1, row:7, w:3, h:2, doorCol:2, doorRow:8 }
+  ];
+
+  function cellInfo(col,row){
+    for(const b of buildings){
+      const inFootprint = col>=b.col && col<b.col+b.w && row>=b.row && row<b.row+b.h;
+      if(inFootprint){
+        if(col===b.doorCol && row===b.doorRow) return { type:"door", building:b };
+        return { type:"wall" };
+      }
+    }
+    return { type:"open" };
+  }
 
   const toastEl = document.getElementById('toast');
-  const overlayEl = document.getElementById('overlay');
-  const dlgName = document.getElementById('dlg-name');
-  const dlgText = document.getElementById('dlg-text');
-  const dlgChoices = document.getElementById('dlg-choices');
-  const endOverlay = document.getElementById('end-overlay');
-  const destList = document.getElementById('dest-list');
-  const playerToken = document.getElementById('player-token');
-
   let toastTimer = null;
   function showToast(msg){
     toastEl.textContent = msg;
@@ -371,6 +436,53 @@
     clearTimeout(toastTimer);
     toastTimer = setTimeout(()=> toastEl.classList.remove('show'), 2200);
   }
+
+  function movePlayer(dir){
+    if(state.dialogueOpen) return;
+    let nc = player.col, nr = player.row;
+    if(dir==='up') nr -= 1;
+    if(dir==='down') nr += 1;
+    if(dir==='left') nc -= 1;
+    if(dir==='right') nc += 1;
+    if(nc < 1 || nc > COLS || nr < 1 || nr > ROWS){
+      if(nr > ROWS) showToast("The road south continues, but your journey here isn't finished yet.");
+      return;
+    }
+    const info = cellInfo(nc,nr);
+    if(info.type === 'wall'){
+      showToast("A sturdy adobe wall. No way through here.");
+      return;
+    }
+    player.col = nc; player.row = nr;
+    renderPlayer();
+    if(info.type === 'door'){
+      handleDoor(info.building);
+    }
+  }
+
+  function renderPlayer(){
+    const tok = document.getElementById('player-token');
+    tok.style.gridColumn = player.col + " / span 1";
+    tok.style.gridRow = player.row + " / span 1";
+  }
+
+  document.addEventListener('keydown', (e) => {
+    const map = { ArrowUp:'up', ArrowDown:'down', ArrowLeft:'left', ArrowRight:'right',
+                  w:'up', s:'down', a:'left', d:'right', W:'up', S:'down', A:'left', D:'right' };
+    if(map[e.key] && document.getElementById('screen-game').classList.contains('active')){
+      e.preventDefault();
+      movePlayer(map[e.key]);
+    }
+  });
+  document.querySelectorAll('.dpad button[data-dir]').forEach(btn => {
+    btn.addEventListener('click', () => movePlayer(btn.getAttribute('data-dir')));
+  });
+
+  // ---------- DIALOGUE ----------
+  const overlayEl = document.getElementById('overlay');
+  const dlgName = document.getElementById('dlg-name');
+  const dlgText = document.getElementById('dlg-text');
+  const dlgChoices = document.getElementById('dlg-choices');
 
   function openDialogue(name, text, choices){
     state.dialogueOpen = true;
@@ -402,159 +514,197 @@
     render();
   }
 
-  const encounters = {
-    chihuahua(){
-      openDialogue("RANCHER", "A rancher leans against his truck, hat low against the sun. \"Long way from home, eh? Desert's not kind to strangers.\"", [
-        { label:"Trade a few pesos for water and jerky (-5)", action:() => {
-            if(state.pesos>=5){ state.pesos-=5; showResponse("RANCHER","He fills your canteen and wraps some dried meat. \"Keep your strength up.\""); }
-            else { showResponse("RANCHER","\"Come back when you've got a few pesos to spare.\""); }
+  function handleDoor(b){
+    if(!state.visited[b.id]){
+      state.visited[b.id] = true;
+      ENCOUNTERS[b.id]();
+    } else {
+      showToast("You've already spoken with them today.");
+    }
+  }
+
+  // ---------- ENCOUNTERS ----------
+  const ENCOUNTERS = {
+    iglesia(){
+      const isPriest = state.role === 'priest';
+      const intro = isPriest
+        ? "Padre Anselmo clasps your hand warmly. \"Ah, a brother in the cloth! Have you heard the whispers from Dolores? Some say Padre Hidalgo speaks of rising against the Crown.\""
+        : "Padre Anselmo lights a candle at the altar. \"Word travels even here, from a parish called Dolores. They say the priest there speaks dangerous things about liberty.\"";
+      const choices = [
+        { label:"Voice your support for independence", action:() => {
+            state.causa += 2;
+            showResponse("PADRE ANSELMO", "\"I feared as much,\" he sighs, \"but perhaps it is time.\" (Causa shifts toward Independence)");
         }},
-        { label:"Ask about the road south", action:() => showResponse("RANCHER","\"Guadalajara's a few days on. Mind the heat at midday.\"") },
-        { label:"Leave", action: closeDialogue }
-      ]);
-    },
-    guadalajara(){
-      openDialogue("MARIACHI", "A mariachi tunes his guitarrón in the plaza, sunlight catching the silver on his sombrero.", [
-        { label:"Toss a few coins in his case (-3)", action:() => {
-            if(state.pesos>=3){ state.pesos-=3; state.rep+=1; showResponse("MARIACHI","He breaks into a bright son jalisciense. A small crowd gathers. (+1 Reputation)"); }
-            else { showResponse("MARIACHI","\"Ah, another time then, amigo.\""); }
+        { label:"Urge loyalty to the Crown and Church", action:() => {
+            state.causa -= 2;
+            showResponse("PADRE ANSELMO", "\"Wisely said,\" he replies. \"Order is God's will.\" (Causa shifts toward the Crown)");
         }},
-        { label:"Ask him for a song for your grandmother", action:() => showResponse("MARIACHI","He smiles and plays something slow and sweet. \"For the road,\" he says.") },
+        { label:"Ask what he knows, say nothing of your own views", action:() => {
+            showResponse("PADRE ANSELMO", "\"Only rumors, so far,\" he admits, \"but rumors have a way of becoming history.\"");
+        }},
         { label:"Leave", action: closeDialogue }
-      ]);
+      ];
+      if(isPriest){
+        choices.splice(3, 0, {
+          label:"Speak to him in confidence, priest to priest",
+          action:() => {
+            state.causa += 1;
+            state.reales += 2;
+            showResponse("PADRE ANSELMO", "He presses a few reales into your hand. \"For the road, hermano. Go carefully.\" (+2 Reales, Causa +1)");
+          }
+        });
+      }
+      openDialogue("IGLESIA", intro, choices);
     },
-    mexicocity(){
-      openDialogue("THE CITY", "The city roars around you, camiones and vendors and a thousand footsteps. A tourist stops you, map upside down in her hands. \"Excuse me, do you know the way to the Zócalo?\"", [
-        { label:"Walk her most of the way there", action:() => { state.rep+=1; showResponse("THE CITY","\"Thank you so much,\" she says, relieved. You lose a little time, but it feels right. (+1 Reputation)"); } },
-        { label:"Point vaguely and keep walking", action:() => { state.rep-=1; showResponse("THE CITY","She frowns and wanders off in the wrong direction. You feel a small pang of guilt. (-1 Reputation)"); } },
-        { label:"Buy a torta from a stand instead (-4)", action:() => {
-            if(state.pesos>=4){ state.pesos-=4; state.hp=Math.min(3,state.hp+1); showResponse("THE CITY","Best torta you've had in years. You feel steadier for the road ahead. (+1 HP)"); }
-            else { showResponse("THE CITY","\"Sorry, need a few more pesos for that one.\""); }
+
+    alcalde(){
+      const isPolitico = state.role === 'politico';
+      const intro = isPolitico
+        ? "A stern peninsular official looks up from his ledgers. His eyes flicker with recognition. \"Ah — I've heard your name spoken of, even in the capital.\""
+        : "A stern peninsular official looks up from his ledgers. \"You're new in town. State your business.\"";
+      const choices = [
+        { label:"Assure him of your loyalty to the Crown", action:() => {
+            state.causa -= 1;
+            showResponse("EL ALCALDE", "\"Good. We need fewer troublemakers and more men like you.\" (Causa shifts toward the Crown)");
+        }},
+        { label:"Say only that you're passing through", action:() => {
+            showResponse("EL ALCALDE", "He grunts and returns to his papers, uninterested.");
+        }},
+        { label:"Ask what he thinks of the talk from Dolores", action:() => {
+            showResponse("EL ALCALDE", "His face hardens. \"Sedition, nothing more. It will be crushed before it spreads.\"");
+        }},
+        { label:"Leave", action: closeDialogue }
+      ];
+      if(isPolitico){
+        choices.splice(3, 0, {
+          label:"Mention your connections in the capital",
+          action:() => {
+            state.reales += 5;
+            showResponse("EL ALCALDE", "He softens, sliding a small purse across the desk. \"For your discretion, señor.\" (+5 Reales)");
+          }
+        });
+      }
+      openDialogue("CASA DEL ALCALDE", intro, choices);
+    },
+
+    stable(){
+      const isFarmer = state.role === 'farmer';
+      const intro = "A weathered stablehand brushes down a tired horse. \"Need a mount, traveler? The roads south aren't kind to those on foot these days.\"";
+      const choices = [
+        { label:"Buy a horse (-8 Reales)", action:() => {
+            if(state.reales >= 8){
+              state.reales -= 8;
+              state.hasHorse = true;
+              showResponse("PUESTO DE CABALLOS", "\"She's a good girl, this one. Name's Canela.\" A horse will serve you well when the road calls.");
+            } else {
+              showResponse("PUESTO DE CABALLOS", "\"Come back when your purse is heavier, friend.\"");
+            }
+        }},
+        { label:"Ask about the roads south", action:() => {
+            showResponse("PUESTO DE CABALLOS", "\"Bandits, soldiers, and worse. Keep your wits about you.\"");
+        }},
+        { label:"Leave", action: closeDialogue }
+      ];
+      if(isFarmer){
+        choices.splice(2, 0, {
+          label:"Offer to trade grain for stable work",
+          action:() => {
+            state.reales += 3;
+            showResponse("PUESTO DE CABALLOS", "He nods appreciatively. \"A farmer's hands are always welcome here.\" (+3 Reales)");
+          }
+        });
+      }
+      openDialogue("PUESTO DE CABALLOS", intro, choices);
+    },
+
+    tavern(){
+      const intro = "The tavern is dim and loud, thick with the smell of mezcal and roasted maize. Two men argue loudly in the corner about the news from Dolores.";
+      openDialogue("BAR RESTAURANTE", intro, [
+        { label:"Buy a round and listen to the gossip (-3 Reales)", action:() => {
+            if(state.reales >= 3){
+              state.reales -= 3;
+              showResponse("BAR RESTAURANTE", "The talk turns freely once the drinks arrive. Everyone, it seems, has an opinion on independence.");
+            } else {
+              showResponse("BAR RESTAURANTE", "\"No coin, no cup,\" the barkeep shrugs.");
+            }
+        }},
+        { label:"Side with the man arguing for independence", action:() => {
+            state.causa += 1;
+            showResponse("BAR RESTAURANTE", "\"¡Bien dicho!\" he claps you on the back, nearly spilling his drink. (Causa shifts toward Independence)");
+        }},
+        { label:"Side with the man arguing for the Crown", action:() => {
+            state.causa -= 1;
+            showResponse("BAR RESTAURANTE", "\"Finally, a sensible man,\" he says, raising his cup to you. (Causa shifts toward the Crown)");
+        }},
+        { label:"Keep to yourself", action:() => {
+            showResponse("BAR RESTAURANTE", "You find a quiet corner and let the argument wash over you.");
         }}
       ]);
     },
-    veracruz(){
-      openDialogue("FISHERMAN", "An old fisherman mends his nets on the dock, the smell of salt and diesel in the air. \"Not many travelers come through here anymore,\" he says.", [
-        { label:"Listen to his stories of the sea", action:() => { state.rep+=1; showResponse("FISHERMAN","He tells you of storms and treasures and a shipwreck his grandfather swore was true. (+1 Reputation)"); } },
-        { label:"Buy fresh fish for the road (-5)", action:() => {
-            if(state.pesos>=5){ state.pesos-=5; showResponse("FISHERMAN","He wraps a fresh catch in paper. \"Cook it soon,\" he warns."); }
-            else { showResponse("FISHERMAN","\"Times are tight for both of us, eh?\""); }
+
+    policia(){
+      const isPriest = state.role === 'priest';
+      const isPolitico = state.role === 'politico';
+      const intro = "Two guards eye you as you approach the post. \"Papers,\" one demands flatly.";
+      const claimLabel = isPriest ? "Explain you're on Church business"
+                        : isPolitico ? "Mention your government affiliation"
+                        : "Explain you're a farmer here on business";
+      const claimAction = () => {
+        if(isPriest){
+          showResponse("POLICÍA", "He straightens at the mention of the Church. \"Apologies, Padre. Go on.\"");
+        } else if(isPolitico){
+          showResponse("POLICÍA", "His posture changes at once. \"Of course, señor. Right this way.\"");
+        } else {
+          showResponse("POLICÍA", "\"Farmers,\" he mutters, unimpressed, but waves you through anyway.");
+        }
+      };
+      openDialogue("POLICÍA", intro, [
+        { label:"Show your papers and answer honestly", action:() => {
+            showResponse("POLICÍA", "He glances them over and waves you on. \"Move along.\"");
+        }},
+        { label: claimLabel, action: claimAction },
+        { label:"Say nothing and hope they lose interest", action:() => {
+            if(Math.random() < 0.5){
+              showResponse("POLICÍA", "They lose interest and let you pass without another word.");
+            } else {
+              state.reales = Math.max(0, state.reales - 2);
+              showResponse("POLICÍA", "\"A fine, for your trouble,\" one says, pocketing a couple reales. (-2 Reales)");
+            }
         }},
         { label:"Leave", action: closeDialogue }
       ]);
     },
-    oaxaca(){
-      openDialogue("WEAVER", "A weaver sits before her loom in the market, threads of red and indigo flying between her fingers.", [
-        { label:"Admire her weaving and talk a while", action:() => { state.rep+=1; showResponse("WEAVER","She tells you the patterns are older than the town itself. (+1 Reputation)"); } },
-        { label:"Buy a woven bracelet for your grandmother (-6)", action:() => {
-            if(state.pesos>=6){ state.pesos-=6; state.hasGift=true; showResponse("WEAVER","She wraps it carefully. \"For someone special,\" she says. You tuck it beside the letter."); }
-            else { showResponse("WEAVER","\"Save your pesos for the road, traveler. Maybe next time.\""); }
+
+    mercado(){
+      const intro = "Stalls crowd the square, heavy with maize, chiles, and cloth, though the vendors mutter about rising taxes.";
+      openDialogue("MERCADO", intro, [
+        { label:"Buy provisions for the road (-4 Reales)", action:() => {
+            if(state.reales >= 4){
+              state.reales -= 4;
+              state.hp = Math.min(state.maxHp, state.hp + 1);
+              showResponse("MERCADO", "Dried meat and tortillas, wrapped tight. You feel better prepared. (+1 HP)");
+            } else {
+              showResponse("MERCADO", "\"Not enough coin for that, I'm afraid,\" the vendor says.");
+            }
         }},
-        { label:"Leave", action: closeDialogue }
-      ]);
-    },
-    chiapas(){
-      openDialogue("GUIDE", "A guide rests near the tree line, ruins just visible through the canopy behind him. \"Rain's coming. You should keep moving, but the ruins are worth a look if you've got a moment.\"", [
-        { label:"Take a moment to see the ruins", action:() => { state.rep+=1; showResponse("GUIDE","Stone faces stare down at you from the trees, worn soft by centuries of rain. (+1 Reputation)"); } },
-        { label:"Press on, no time to spare", action:() => showResponse("GUIDE","\"Suit yourself,\" he shrugs, and points you toward the road south.") },
+        { label:"Ask the vendors what they think of independence", action:() => {
+            state.causa += 1;
+            showResponse("MERCADO", "\"Less tax, more bread,\" one mutters. \"If independence brings that, I'm for it.\" (Causa shifts toward Independence)");
+        }},
         { label:"Leave", action: closeDialogue }
       ]);
     }
   };
 
-  function reachEnding(){
-    state.ended = true;
-    let title, text;
-    if(state.rep >= 4 && state.hasGift){
-      title = "WELCOMED HOME";
-      text = "Grandmother's door opens before you can even knock. \"I heard you were coming,\" she laughs, pulling you into a hug that smells of cinnamon and dust. You hand her the letter, and the little bracelet besides. She holds both to her chest like they're the most precious things in the world. The whole road down here, it seems, was worth every step.";
-    } else if(state.rep >= 2){
-      title = "THE LETTER ARRIVES";
-      text = "Grandmother opens the door and you hand her the letter, road-worn but intact. She reads it slowly, smiling at something only she understands, then looks up at you. \"You came all this way,\" she says softly. \"Sit. Tell me everything.\"";
-    } else {
-      title = "A QUIET ARRIVAL";
-      text = "Grandmother takes the letter with quiet hands. \"Long trip,\" she says, studying your tired face. She doesn't ask about the journey, not yet. There will be time for that, now that you're finally here.";
-    }
-    document.getElementById('end-title').textContent = title;
-    document.getElementById('end-text').textContent = text;
-    document.getElementById('end-stats').textContent =
-      "HP: " + state.hp + "   Pesos: " + state.pesos + "   Reputation: " + state.rep +
-      (state.hasGift ? "   (You carried a gift for her too.)" : "");
-    endOverlay.classList.add('active');
-  }
-
-  function arrive(id){
-    if(id === 'merida'){ reachEnding(); render(); return; }
-    if(!visited.has(id)){
-      visited.add(id);
-      if(encounters[id]) encounters[id]();
-    } else {
-      showToast("Nothing new here for now. The road continues.");
-    }
-    render();
-  }
-
-  function travelTo(id){
-    if(state.dialogueOpen || state.ended) return;
-    const cur = nodes[state.current];
-    if(!cur.edges.includes(id)){
-      showToast("No direct road runs there from here.");
-      return;
-    }
-    state.current = id;
-    positionToken(id);
-    setTimeout(() => arrive(id), 350);
-    render();
-  }
-
-  function positionToken(id){
-    const n = nodes[id];
-    playerToken.style.left = (n.x/600*100) + '%';
-    playerToken.style.top = (n.y/500*100) + '%';
-  }
-
+  // ---------- RENDER ----------
   function render(){
     document.getElementById('stat-hp').textContent = state.hp;
-    document.getElementById('stat-pesos').textContent = state.pesos;
-    document.getElementById('stat-rep').textContent = state.rep;
-    document.getElementById('stat-gift').textContent = state.hasGift ? 'yes' : 'no';
-
-    const curEdges = nodes[state.current].edges;
-    document.querySelectorAll('.node-btn').forEach(btn => {
-      const id = btn.getAttribute('data-node');
-      btn.classList.remove('current','reachable','visited');
-      if(id === state.current) btn.classList.add('current');
-      else if(curEdges.includes(id)) btn.classList.add('reachable');
-      else if(visited.has(id)) btn.classList.add('visited');
-    });
-
-    destList.innerHTML = '';
-    curEdges.forEach(id => {
-      const btn = document.createElement('button');
-      btn.className = 'dest-btn';
-      btn.textContent = 'Travel to ' + nodes[id].name;
-      btn.onclick = () => travelTo(id);
-      destList.appendChild(btn);
-    });
+    document.getElementById('stat-reales').textContent = state.reales;
+    document.getElementById('stat-causa').textContent = causaLabel(state.causa);
+    document.getElementById('stat-role').textContent = ROLE_CONFIG[state.role].label;
+    renderPlayer();
   }
 
-  document.querySelectorAll('.node-btn').forEach(btn => {
-    btn.addEventListener('click', () => travelTo(btn.getAttribute('data-node')));
-  });
-
-  document.getElementById('restart-btn').addEventListener('click', () => {
-    state = freshState();
-    visited = new Set(["tijuana"]);
-    positionToken('tijuana');
-    endOverlay.classList.remove('active');
-    render();
-  });
-
-  // Intro
-  openDialogue("YOUR JOURNEY BEGINS", "You stand in Tijuana, your grandmother's letter tucked safe in your bag. Mérida is a long road south. Time to go.", [
-    { label:"Begin the journey", action: closeDialogue }
-  ]);
-  positionToken('tijuana');
   render();
 })();
 </script>

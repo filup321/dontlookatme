@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Mexico 1810</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <div id="game-root">
+    <div id="screen-intro" class="screen">
+      <div id="intro-text"></div>
+      <div class="intro-button-row">
+        <button id="intro-button" class="pixel-btn" type="button"></button>
+      </div>
+    </div>
+
+    <div id="screen-map" class="screen hidden">
+      <canvas id="game-canvas" width="160" height="144"></canvas>
+      <div id="map-labels"></div>
+      <div id="dialogue-overlay" class="screen hidden">
+        <div class="dialogue-box">
+          <div id="dialogue-speaker"></div>
+          <div id="dialogue-text"></div>
+          <div id="dialogue-choices" class="hidden"></div>
+          <form id="dialogue-input-form" class="hidden">
+            <input id="dialogue-input-field" type="text" autocomplete="off" />
+            <button class="pixel-btn" type="submit">say</button>
+          </form>
+          <div id="dialogue-continue" class="hidden"></div>
+        </div>
+      </div>
+    </div>
+
+    <div id="screen-gameover" class="screen hidden">
+      <button id="play-again-button" class="pixel-btn" type="button">play again</button>
+    </div>
+  </div>
+
+  <script src="js/state.js?v=5"></script>
+  <script src="js/dialogueData.js?v=5"></script>
+  <script src="js/dialogueEngine.js?v=5"></script>
+  <script src="js/intro.js?v=5"></script>
+  <script src="js/map.js?v=5"></script>
+  <script src="js/main.js?v=5"></script>
+</body>
+</html>

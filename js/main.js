@@ -25,6 +25,7 @@
   const canvas = document.getElementById('game-canvas');
   const mapLabels = document.getElementById('map-labels');
   const playAgainButton = document.getElementById('play-again-button');
+  const dpad = document.getElementById('dpad');
 
   function showScreen(name) {
     Object.values(screens).forEach((el) => el.classList.add('hidden'));
@@ -34,6 +35,7 @@
   function startMap() {
     GameState.screen = 'map';
     showScreen('map');
+    dpad.classList.remove('hidden');
     MapScreen.draw();
   }
 
@@ -42,15 +44,28 @@
   });
 
   MapScreen.init(canvas, mapLabels, {
-    onEnterBuilding: (locationId) => DialogueEngine.open(locationId),
+    onEnterBuilding: (locationId) => {
+      dpad.classList.add('hidden');
+      DialogueEngine.open(locationId);
+    },
   });
 
   DialogueEngine.init(dialogueEls, {
-    onClosed: () => MapScreen.draw(),
+    onClosed: () => {
+      dpad.classList.remove('hidden');
+      MapScreen.draw();
+    },
     onGameOver: () => {
       GameState.screen = 'gameover';
+      dpad.classList.add('hidden');
       showScreen('gameover');
     },
+  });
+
+  ['up', 'down', 'left', 'right'].forEach((dir) => {
+    document.getElementById(`dpad-${dir}`).addEventListener('click', () => {
+      MapScreen.move(dir);
+    });
   });
 
   dialogueEls.inputForm.addEventListener('submit', (e) => {
@@ -60,6 +75,7 @@
 
   playAgainButton.addEventListener('click', () => {
     resetGame();
+    dpad.classList.add('hidden');
     showScreen('intro');
     IntroSequence.show('intro1');
   });

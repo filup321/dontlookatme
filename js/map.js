@@ -11,8 +11,6 @@ const BUILDINGS = [
     cols: [4, 5, 6],
     rows: [0, 1],
     door: { col: 5, row: 2 },
-    wall: '#c9a86a',
-    roof: '#8b5a2b',
   },
   {
     id: 'El_Mercado',
@@ -20,8 +18,6 @@ const BUILDINGS = [
     cols: [0, 1, 2],
     rows: [3, 4],
     door: { col: 1, row: 5 },
-    wall: '#d98c3d',
-    roof: '#a85c2a',
   },
   {
     id: 'La_Cantina',
@@ -29,8 +25,6 @@ const BUILDINGS = [
     cols: [7, 8, 9],
     rows: [3, 4],
     door: { col: 8, row: 5 },
-    wall: '#b23a3a',
-    roof: '#7a2323',
   },
 ];
 
@@ -72,7 +66,6 @@ const MapScreen = (() => {
   }
 
   function handleKeydown(e) {
-    if (GameState.screen !== 'map' || GameState.dialogue) return;
     let dCol = 0, dRow = 0, dir = GameState.player.dir;
     if (e.key === 'ArrowUp' || e.key === 'w') { dRow = -1; dir = 'up'; }
     else if (e.key === 'ArrowDown' || e.key === 's') { dRow = 1; dir = 'down'; }
@@ -81,6 +74,25 @@ const MapScreen = (() => {
     else return;
 
     e.preventDefault();
+    attemptMove(dCol, dRow, dir);
+  }
+
+  const DIR_DELTAS = {
+    up: { dCol: 0, dRow: -1 },
+    down: { dCol: 0, dRow: 1 },
+    left: { dCol: -1, dRow: 0 },
+    right: { dCol: 1, dRow: 0 },
+  };
+
+  function move(dir) {
+    const delta = DIR_DELTAS[dir];
+    if (!delta) return;
+    attemptMove(delta.dCol, delta.dRow, dir);
+  }
+
+  function attemptMove(dCol, dRow, dir) {
+    if (GameState.screen !== 'map' || GameState.dialogue) return;
+
     GameState.player.dir = dir;
     if (moveCooldown) return;
 
@@ -121,46 +133,144 @@ const MapScreen = (() => {
     }
   }
 
+  function rectsAt(x, y, rects) {
+    rects.forEach(([dx, dy, w, h, color]) => {
+      ctx.fillStyle = color;
+      ctx.fillRect(x + dx, y + dy, w, h);
+    });
+  }
+
+  function drawColegio(x, y) {
+    rectsAt(x, y, [
+      [22, 0, 4, 3, '#c9a227'],
+      [18, 3, 12, 7, '#7a8fa6'],
+      [20, 3, 2, 7, '#95a8bb'],
+      [4, 10, 40, 6, '#8b5a2b'],
+      [14, 10, 20, 2, '#e8dcc0'],
+      [4, 16, 40, 18, '#c9a86a'],
+      [8, 16, 3, 18, '#f8f4e3'],
+      [18, 16, 3, 18, '#f8f4e3'],
+      [27, 16, 3, 18, '#f8f4e3'],
+      [37, 16, 3, 18, '#f8f4e3'],
+      [2, 34, 44, 3, '#d9d2b8'],
+      [0, 37, 48, 3, '#c2baa0'],
+      [4, 40, 16, 8, '#c9a86a'],
+      [28, 40, 16, 8, '#c9a86a'],
+      [20, 40, 8, 8, '#3b2a1a'],
+    ]);
+  }
+
+  function drawCantina(x, y) {
+    rectsAt(x, y, [
+      [2, 0, 44, 9, '#7a2323'],
+      [2, 2, 44, 1, '#9c4040'],
+      [2, 5, 44, 1, '#9c4040'],
+      [0, 9, 48, 1, '#5a1a1a'],
+      [4, 10, 40, 16, '#c9967a'],
+      [10, 13, 6, 3, '#2a1f1f'],
+      [12, 11, 2, 2, '#2a1f1f'],
+      [32, 13, 6, 3, '#2a1f1f'],
+      [34, 11, 2, 2, '#2a1f1f'],
+      [4, 16, 40, 1, '#1a1a1a'],
+      [4, 16, 1, 8, '#1a1a1a'],
+      [43, 16, 1, 8, '#1a1a1a'],
+      [8, 17, 1, 7, '#1a1a1a'],
+      [14, 17, 1, 7, '#1a1a1a'],
+      [20, 17, 1, 7, '#1a1a1a'],
+      [27, 17, 1, 7, '#1a1a1a'],
+      [33, 17, 1, 7, '#1a1a1a'],
+      [39, 17, 1, 7, '#1a1a1a'],
+      [7, 21, 2, 2, '#e8b800'],
+      [39, 21, 2, 2, '#e8b800'],
+      [4, 26, 40, 14, '#c9967a'],
+      [18, 26, 12, 2, '#3b2a1a'],
+      [19, 28, 10, 12, '#3b2a1a'],
+      [0, 40, 48, 8, '#5a1a1a'],
+      [19, 40, 10, 8, '#2a1010'],
+    ]);
+  }
+
+  function drawMercado(x, y) {
+    rectsAt(x, y, [
+      [0, 2, 48, 8, '#a85c2a'],
+      [0, 4, 48, 1, '#c07840'],
+      [0, 7, 48, 1, '#c07840'],
+      [8, 0, 6, 2, '#a85c2a'],
+      [34, 0, 6, 2, '#a85c2a'],
+      [0, 10, 48, 4, '#1f3a5f'],
+      [2, 14, 44, 24, '#f2ecd8'],
+      [8, 18, 6, 3, '#2a2a2a'],
+      [10, 16, 2, 2, '#2a2a2a'],
+      [34, 18, 6, 3, '#2a2a2a'],
+      [36, 16, 2, 2, '#2a2a2a'],
+      [16, 24, 16, 2, '#1f3a5f'],
+      [18, 26, 12, 12, '#3b2a1a'],
+      [20, 26, 2, 2, '#f2ecd8'],
+      [26, 26, 2, 2, '#f2ecd8'],
+      [0, 38, 48, 10, '#d9d2b8'],
+      [18, 38, 12, 10, '#3b2a1a'],
+    ]);
+  }
+
+  const BUILDING_PAINTERS = {
+    Colegio_de_San_Nicolas: drawColegio,
+    El_Mercado: drawMercado,
+    La_Cantina: drawCantina,
+  };
+
   function drawBuilding(b) {
     const minCol = Math.min(...b.cols);
     const minRow = Math.min(...b.rows);
-    const w = b.cols.length * TILE;
-    const h = b.rows.length * TILE;
-    const x = minCol * TILE;
-    const y = minRow * TILE;
-
-    ctx.fillStyle = b.roof;
-    ctx.fillRect(x, y, w, TILE);
-    ctx.fillStyle = b.wall;
-    ctx.fillRect(x, y + TILE, w, h - TILE);
-
-    const doorX = b.door.col * TILE;
-    const doorY = b.door.row * TILE;
-    ctx.fillStyle = '#3b2a1a';
-    ctx.fillRect(doorX + 3, doorY, TILE - 6, TILE);
+    BUILDING_PAINTERS[b.id](minCol * TILE, minRow * TILE);
   }
 
   function drawPlayer() {
     const x = GameState.player.col * TILE;
     const y = GameState.player.row * TILE;
+    const HAT_CROWN = '#8a5a4a';
+    const HAT_BRIM = '#5a3a3a';
+    const HAT_BAND = '#2f4f7a';
+    const SKIN = '#f0c090';
+    const EYE = '#2f4f7a';
+    const SCARF = '#c1502e';
+    const SHIRT = '#6b3f3f';
+    const PANTS = '#b89b72';
+    const BOOTS = '#4a3222';
+    const OUTLINE = '#1a1a1a';
 
-    ctx.fillStyle = '#e8b98a';
-    ctx.fillRect(x + 5, y + 2, 6, 5);
+    rectsAt(x, y, [
+      [6, 0, 4, 1, HAT_CROWN],
+      [5, 1, 6, 1, HAT_CROWN],
+      [3, 1, 2, 1, HAT_BRIM],
+      [11, 1, 2, 1, HAT_BRIM],
+      [3, 2, 10, 1, HAT_BAND],
+      [1, 3, 14, 1, HAT_BRIM],
+      [3, 4, 2, 1, HAT_BRIM],
+      [5, 4, 6, 1, SKIN],
+      [11, 4, 2, 1, HAT_BRIM],
+      [3, 5, 2, 1, HAT_BRIM],
+      [5, 5, 6, 1, SKIN],
+      [11, 5, 2, 1, HAT_BRIM],
+      [3, 6, 2, 1, HAT_BRIM],
+      [5, 6, 6, 1, SKIN],
+      [11, 6, 2, 1, HAT_BRIM],
+      [4, 7, 8, 1, SKIN],
+      [4, 8, 8, 1, SCARF],
+      [4, 9, 8, 2, SHIRT],
+      [4, 9, 1, 2, OUTLINE],
+      [11, 9, 1, 2, OUTLINE],
+      [5, 11, 6, 2, PANTS],
+      [4, 13, 3, 2, BOOTS],
+      [9, 13, 3, 2, BOOTS],
+    ]);
 
-    ctx.fillStyle = '#2f4f7a';
-    ctx.fillRect(x + 4, y + 7, 8, 7);
-
-    ctx.fillStyle = '#1a1a1a';
+    // Eyes indicate facing; 'up' shows the back of the hat (no eyes).
     if (GameState.player.dir === 'down') {
-      ctx.fillRect(x + 6, y + 5, 1, 1);
-      ctx.fillRect(x + 9, y + 5, 1, 1);
-    } else if (GameState.player.dir === 'up') {
-      ctx.fillRect(x + 6, y + 3, 1, 1);
-      ctx.fillRect(x + 9, y + 3, 1, 1);
+      rectsAt(x, y, [[6, 5, 1, 1, EYE], [9, 5, 1, 1, EYE]]);
     } else if (GameState.player.dir === 'left') {
-      ctx.fillRect(x + 6, y + 5, 1, 1);
+      rectsAt(x, y, [[6, 5, 1, 1, EYE]]);
     } else if (GameState.player.dir === 'right') {
-      ctx.fillRect(x + 9, y + 5, 1, 1);
+      rectsAt(x, y, [[9, 5, 1, 1, EYE]]);
     }
   }
 
@@ -171,5 +281,5 @@ const MapScreen = (() => {
     drawPlayer();
   }
 
-  return { init, draw };
+  return { init, draw, move };
 })();

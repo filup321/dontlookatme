@@ -32,26 +32,6 @@ const INTRO_SCREENS = [
       '¡Con todo!',
     ],
     button: 'Vamos!',
-    next: 'intro3',
-  },
-  {
-    id: 'intro3',
-    lines: [
-      'Our journey begins in a town called Valladolid in the Michoacán province of New Spain',
-      '',
-      'Go to the University and see what you can find out about this priest',
-      '',
-      'Be careful',
-    ],
-    button: 'vamos',
-    next: 'intro4',
-  },
-  {
-    id: 'intro4',
-    lines: [
-      'Bienvenidos a Valladolid',
-    ],
-    button: 'vamos',
     next: 'map',
   },
 ];

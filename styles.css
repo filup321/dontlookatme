@@ -12,9 +12,16 @@ body {
   font-family: 'Courier New', Courier, monospace;
 }
 
+#game-wrapper {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: min(94vw, 640px);
+}
+
 #game-root {
   position: relative;
-  width: min(94vw, 640px);
+  width: 100%;
   aspect-ratio: 160 / 144;
   background: #000;
   outline: 4px solid #0a0a0a;
@@ -107,6 +114,46 @@ body {
     1px 1px #1a1a1a, -1px -1px #1a1a1a,
     1px -1px #1a1a1a, -1px 1px #1a1a1a;
 }
+
+/* Virtual d-pad (touch controls), shown below the game canvas */
+#dpad {
+  margin-top: 14px;
+  width: 132px;
+  max-width: 34vw;
+  aspect-ratio: 1;
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  grid-template-rows: 1fr 1fr 1fr;
+  gap: 6px;
+}
+
+.dpad-btn {
+  font-family: inherit;
+  font-size: clamp(14px, 4vw, 20px);
+  background: #f8f4e3;
+  color: #1a1a1a;
+  border: 2px solid #1a1a1a;
+  border-radius: 0;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  touch-action: manipulation;
+  user-select: none;
+  -webkit-user-select: none;
+  box-shadow: 2px 2px 0 #1a1a1a;
+}
+
+.dpad-btn:active {
+  background: #e8e0c8;
+  transform: translate(1px, 1px);
+  box-shadow: 1px 1px 0 #1a1a1a;
+}
+
+.dpad-up { grid-column: 2; grid-row: 1; }
+.dpad-left { grid-column: 1; grid-row: 2; }
+.dpad-right { grid-column: 3; grid-row: 2; }
+.dpad-down { grid-column: 2; grid-row: 3; }
 
 /* Dialogue overlay */
 #dialogue-overlay {

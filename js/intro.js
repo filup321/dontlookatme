@@ -45,25 +45,41 @@ const IntroSequence = (() => {
     onComplete = callbacks.onComplete || onComplete;
   }
 
+  // Blank entries in a screen's `lines` array render as a full blank line
+  // (via the blank-line CSS class) rather than an actual space character,
+  // since a lone space collapses to zero height under normal CSS whitespace rules.
+  function renderLines(lines, buttonText, onClick) {
+    els.text.innerHTML = '';
+    lines.forEach((line) => {
+      const p = document.createElement('p');
+      if (line === '') {
+        p.className = 'blank-line';
+      } else {
+        p.textContent = line;
+      }
+      els.text.appendChild(p);
+    });
+    els.button.textContent = buttonText;
+    els.button.onclick = onClick;
+  }
+
   function show(screenId) {
     const screen = INTRO_SCREENS.find((s) => s.id === screenId);
     if (!screen) return;
     GameState.screen = screen.id;
-    els.text.innerHTML = '';
-    screen.lines.forEach((line) => {
-      const p = document.createElement('p');
-      p.textContent = line === '' ? ' ' : line;
-      els.text.appendChild(p);
-    });
-    els.button.textContent = screen.button;
-    els.button.onclick = () => {
+    renderLines(screen.lines, screen.button, () => {
       if (screen.next === 'map') {
         onComplete();
       } else {
         show(screen.next);
       }
-    };
+    });
   }
 
-  return { init, show };
+  function showCustom(lines, buttonText, onContinue) {
+    GameState.screen = 'travel';
+    renderLines(lines, buttonText, onContinue);
+  }
+
+  return { init, show, showCustom };
 })();

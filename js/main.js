@@ -36,7 +36,7 @@
     GameState.screen = 'map';
     showScreen('map');
     dpad.classList.remove('hidden');
-    MapScreen.draw();
+    MapScreen.loadMap('valladolid');
   }
 
   IntroSequence.init(introEls, {
@@ -59,6 +59,16 @@
       GameState.screen = 'gameover';
       dpad.classList.add('hidden');
       showScreen('gameover');
+    },
+    onTravel: (destination) => {
+      dpad.classList.add('hidden');
+      showScreen('intro');
+      IntroSequence.showCustom(['Bienvenidos a Veracruz'], 'vamos', () => {
+        GameState.screen = 'map';
+        showScreen('map');
+        dpad.classList.remove('hidden');
+        MapScreen.loadMap(destination);
+      });
     },
   });
 

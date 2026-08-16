@@ -1,7 +1,8 @@
 // Game state and effect application
 
 const GameState = {
-  screen: 'intro1', // intro1 | intro2 | intro3 | intro4 | map | gameover
+  screen: 'intro1', // intro1 | intro2 | map | travel | gameover
+  currentMap: null, // 'valladolid' | 'veracruz'
   player: { col: 5, row: 7, dir: 'down' },
   inventory: [],
   silverReales: 3,
@@ -11,6 +12,7 @@ const GameState = {
 
 function resetGame() {
   GameState.screen = 'intro1';
+  GameState.currentMap = null;
   GameState.player = { col: 5, row: 7, dir: 'down' };
   GameState.inventory = [];
   GameState.silverReales = 3;

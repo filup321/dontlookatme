@@ -4,11 +4,13 @@ const DialogueEngine = (() => {
   let els = null;
   let onClosed = () => {};
   let onGameOver = () => {};
+  let onTravel = () => {};
 
   function init(elements, callbacks) {
     els = elements;
     onClosed = callbacks.onClosed || onClosed;
     onGameOver = callbacks.onGameOver || onGameOver;
+    onTravel = callbacks.onTravel || onTravel;
   }
 
   function open(locationId) {
@@ -37,6 +39,11 @@ const DialogueEngine = (() => {
     if (target === 'GAME_OVER') {
       close();
       onGameOver();
+      return;
+    }
+    if (target === 'TRAVEL_VERACRUZ') {
+      close();
+      onTravel('veracruz');
       return;
     }
     GameState.dialogue.nodeId = target;
@@ -88,14 +95,7 @@ const DialogueEngine = (() => {
     renderLines(node.speaker, node.lines);
 
     if (node.choices && node.choices.length > 0) {
-      els.choices.classList.remove('hidden');
-      node.choices.forEach((choice) => {
-        const btn = document.createElement('button');
-        btn.className = 'dialogue-choice';
-        btn.textContent = choice.text;
-        btn.addEventListener('click', () => goto(choice.goto));
-        els.choices.appendChild(btn);
-      });
+      renderChoices(node.choices);
       return;
     }
 
@@ -117,9 +117,24 @@ const DialogueEngine = (() => {
     }
   }
 
+  function renderChoices(choices) {
+    els.choices.classList.remove('hidden');
+    choices.forEach((choice) => {
+      const btn = document.createElement('button');
+      btn.className = 'dialogue-choice';
+      btn.textContent = choice.text;
+      btn.addEventListener('click', () => goto(choice.goto));
+      els.choices.appendChild(btn);
+    });
+  }
+
   function renderSequenceStep(node) {
     const idx = GameState.dialogue.sequenceIndex;
     if (idx >= node.steps.length) {
+      if (node.choices && node.choices.length > 0) {
+        renderChoices(node.choices);
+        return;
+      }
       goto(node.goto);
       return;
     }

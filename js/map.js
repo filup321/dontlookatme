@@ -97,6 +97,24 @@ function drawMercado(ctx, x, y) {
   ]);
 }
 
+function drawSignpost(ctx, x, y) {
+  rectsAt(ctx, x, y, [
+    [7, 6, 2, 9, '#5a3a1a'],
+    [6, 14, 4, 2, '#3f2810'],
+    [1, 2, 14, 5, '#c9a86a'],
+    [1, 2, 14, 1, '#3b2a1a'],
+    [1, 6, 14, 1, '#3b2a1a'],
+    [1, 2, 1, 5, '#3b2a1a'],
+    [14, 2, 1, 5, '#3b2a1a'],
+    // left-pointing arrow: three short dashes stepping diagonally toward the
+    // point (a "<" chevron), kept clear of the border so it reads as its own
+    // mark instead of fusing into it.
+    [8, 3, 3, 1, '#1a1a1a'],
+    [5, 4, 3, 1, '#1a1a1a'],
+    [8, 5, 3, 1, '#1a1a1a'],
+  ]);
+}
+
 // ---- Veracruz buildings ----
 
 function drawIglesia(ctx, x, y) {
@@ -239,6 +257,15 @@ const MAPS = {
         door: { col: 8, row: 5 },
         paint: drawCantina,
       },
+      {
+        id: 'Camino_a_Veracruz',
+        label: 'a Veracruz',
+        cols: [0],
+        rows: [0],
+        door: { col: 0, row: 0 },
+        paint: drawSignpost,
+        requiresFlag: 'road_to_veracruz_unlocked',
+      },
     ],
   },
   veracruz: {
@@ -309,13 +336,20 @@ const MapScreen = (() => {
     draw();
   }
 
+  function visibleBuildings(map) {
+    return map.buildings.filter((b) => !b.requiresFlag || GameState.flags[b.requiresFlag]);
+  }
+
   function buildLabels(map) {
     labelContainer.innerHTML = '';
-    map.buildings.forEach((b) => {
+    visibleBuildings(map).forEach((b) => {
       const minCol = Math.min(...b.cols);
       const minRow = Math.min(...b.rows);
       const w = b.cols.length * TILE;
       const centerX = minCol * TILE + w / 2;
+      // Keep the label's centered text from clipping against the canvas edge
+      // for buildings near the border (e.g. a 1-tile signpost at col 0).
+      const clampedCenterX = Math.max(20, Math.min(GRID_COLS * TILE - 20, centerX));
       const labelY = b.labelSide === 'above'
         ? minRow * TILE - 8
         : b.door.row * TILE + TILE + 8;
@@ -323,14 +357,14 @@ const MapScreen = (() => {
       const el = document.createElement('div');
       el.className = 'map-label';
       el.textContent = b.label;
-      el.style.left = `${(centerX / (GRID_COLS * TILE)) * 100}%`;
+      el.style.left = `${(clampedCenterX / (GRID_COLS * TILE)) * 100}%`;
       el.style.top = `${(labelY / (GRID_ROWS * TILE)) * 100}%`;
       labelContainer.appendChild(el);
     });
   }
 
   function buildingAt(map, col, row) {
-    return map.buildings.find((b) => b.cols.includes(col) && b.rows.includes(row));
+    return visibleBuildings(map).find((b) => b.cols.includes(col) && b.rows.includes(row));
   }
 
   function isDoor(building, col, row) {
@@ -378,7 +412,7 @@ const MapScreen = (() => {
 
     const map = currentMap();
 
-    const doorBuilding = map.buildings.find((b) => isDoor(b, targetCol, targetRow));
+    const doorBuilding = visibleBuildings(map).find((b) => isDoor(b, targetCol, targetRow));
     if (doorBuilding) {
       onEnterBuilding(doorBuilding.id);
       draw();
@@ -464,7 +498,7 @@ const MapScreen = (() => {
     const map = currentMap();
     map.drawGround(ctx);
     map.decorations.forEach((d) => d.paint(ctx, d.x, d.y));
-    map.buildings.forEach(drawBuilding);
+    visibleBuildings(map).forEach(drawBuilding);
     drawPlayer();
   }
 

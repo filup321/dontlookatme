@@ -178,8 +178,9 @@ const DIALOGUE_TREES = {
         lines: [
           { type: 'speech', text: 'congrats, I heard the priest was in Veracruz recently. You may want to head there and ask around' },
         ],
+        effects: [{ set_flag: 'road_to_veracruz_unlocked' }],
         choices: [],
-        goto: 'TRAVEL_VERACRUZ',
+        goto: 'EXIT',
       },
     },
   },

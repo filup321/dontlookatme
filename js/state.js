@@ -1,7 +1,7 @@
 // Game state and effect application
 
 const GameState = {
-  screen: 'intro1', // intro1 | intro2 | map | travel | gameover
+  screen: 'intro1', // intro1 | intro2 | map | travel | road | gameover
   currentMap: null, // 'valladolid' | 'veracruz'
   player: { col: 5, row: 7, dir: 'down' },
   inventory: [],
@@ -27,5 +27,6 @@ function applyEffects(effects) {
     if (effect.remove_silver_reales) {
       GameState.silverReales -= effect.remove_silver_reales;
     }
+    if (effect.set_flag) GameState.flags[effect.set_flag] = true;
   });
 }

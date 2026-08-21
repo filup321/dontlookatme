@@ -4,13 +4,11 @@ const DialogueEngine = (() => {
   let els = null;
   let onClosed = () => {};
   let onGameOver = () => {};
-  let onTravel = () => {};
 
   function init(elements, callbacks) {
     els = elements;
     onClosed = callbacks.onClosed || onClosed;
     onGameOver = callbacks.onGameOver || onGameOver;
-    onTravel = callbacks.onTravel || onTravel;
   }
 
   function open(locationId) {
@@ -39,11 +37,6 @@ const DialogueEngine = (() => {
     if (target === 'GAME_OVER') {
       close();
       onGameOver();
-      return;
-    }
-    if (target === 'TRAVEL_VERACRUZ') {
-      close();
-      onTravel('veracruz');
       return;
     }
     GameState.dialogue.nodeId = target;

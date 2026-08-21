@@ -93,12 +93,66 @@ body {
   background: #000;
 }
 
-#game-canvas {
+#game-canvas,
+#road-canvas {
   width: 100%;
   height: 100%;
   display: block;
   image-rendering: pixelated;
   image-rendering: crisp-edges;
+}
+
+/* Road mini-game */
+#screen-road {
+  background: #000;
+}
+
+#road-controls {
+  margin-top: 14px;
+  width: min(94vw, 640px);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.road-lane-btns {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.road-lane-btns .dpad-btn {
+  width: 40px;
+  height: 40px;
+}
+
+.road-action-btns {
+  display: flex;
+  gap: 10px;
+}
+
+.road-action-btn {
+  min-width: 72px;
+}
+
+#road-lose-overlay {
+  display: flex;
+  align-items: flex-end;
+  padding: 3%;
+}
+
+.road-lose-box {
+  width: 100%;
+  background: #f8f4e3;
+  border: 3px solid #1a1a1a;
+  padding: 8px 10px;
+  color: #1a1a1a;
+  font-size: clamp(9px, 2.2vw, 13px);
+  line-height: 1.4;
+}
+
+#road-lose-text {
+  margin-bottom: 6px;
 }
 
 #map-labels {

@@ -158,7 +158,7 @@ const DIALOGUE_TREES = {
         lines: [
           {
             type: 'speech',
-            text: 'I’m New Spain’s biggest export\nI’m optimism in the face bad events\nI’m a quick fix in a difficult situation\nI’m a reward for second place\nDid that last one make it too easy?\nWhat am I?',
+            text: 'I’m formed in the earth but i’m not a plant\nI’m used in jewelry, currencies, and utensils\nI’m a reward for second place\nWhat am I?',
           },
         ],
         accept: ['silver', 'plata'],

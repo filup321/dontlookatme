@@ -310,6 +310,21 @@ body {
   content: '\25B8 next';
 }
 
+@keyframes dialogue-flash {
+  0% { background: #fff6cc; }
+  100% { background: #f8f4e3; }
+}
+
+.dialogue-flash {
+  animation: dialogue-flash 0.3s ease-out;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .dialogue-flash {
+    animation: none;
+  }
+}
+
 /* Game over */
 #screen-gameover {
   display: flex;

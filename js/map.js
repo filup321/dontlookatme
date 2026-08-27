@@ -194,6 +194,129 @@ function drawShip(ctx, x, y) {
   ], 1.5, 8, 8);
 }
 
+// ---- Pueblo buildings ----
+
+function drawFabrica(ctx, x, y) {
+  rectsAt(ctx, x, y, [
+    [4, 0, 6, 10, '#6b5a4a'],
+    [5, 0, 4, 2, '#8a7a6a'],
+    [40, 4, 3, 3, '#c9c2b0'],
+    [43, 1, 3, 3, '#d9d2c0'],
+    [0, 8, 48, 4, '#7a4a2a'],
+    [2, 12, 44, 10, '#9c6a3a'],
+    [4, 14, 8, 6, '#3a5a6a'],
+    [18, 14, 12, 6, '#3a5a6a'],
+    [36, 14, 8, 6, '#3a5a6a'],
+    [2, 22, 44, 18, '#a87a4a'],
+    [6, 26, 8, 6, '#3a5a6a'],
+    [34, 26, 8, 6, '#3a5a6a'],
+    [0, 40, 48, 3, '#6a4a2a'],
+    [19, 40, 10, 8, '#2a1a10'],
+  ]);
+}
+
+// Two-story hacienda with a tile roof, upper-floor windows, and a
+// ground-floor arcade of pillars and arches along the front.
+function drawRancho(ctx, x, y) {
+  rectsAt(ctx, x, y, [
+    [0, 0, 64, 8, '#9c6a3a'],
+    [0, 0, 64, 3, '#c98a4a'],
+
+    [2, 8, 60, 18, '#f2ead8'],
+    [10, 14, 6, 8, '#3a5a6a'],
+    [28, 14, 6, 8, '#3a5a6a'],
+    [46, 14, 6, 8, '#3a5a6a'],
+    [2, 24, 60, 2, '#5a3a2a'],
+
+    [2, 26, 60, 20, '#e8dcc0'],
+    [6, 30, 8, 16, '#4a3222'],
+    [20, 30, 8, 16, '#4a3222'],
+    [34, 30, 8, 16, '#4a3222'],
+    [48, 30, 8, 16, '#4a3222'],
+
+    [26, 46, 12, 10, '#d9c69a'],
+  ]);
+}
+
+const ORCHARD_TREE = [
+  [6, 12, 4, 6, '#5a3a1f'],
+  [0, 6, 16, 6, '#2f5a22'],
+  [2, 1, 12, 10, '#3a6a2a'],
+  [4, 3, 6, 4, '#4f8a3a'],
+];
+
+// Four rows of orchard trees above a small barn, sized to dominate the
+// left side of the pueblo map.
+function drawHuerta(ctx, x, y) {
+  const treeCols = [0, 20, 40, 60];
+  [0, 16, 32, 48].forEach((ty) => {
+    treeCols.forEach((tx) => {
+      rectsAt(ctx, x + tx + 2, y + ty, ORCHARD_TREE);
+    });
+  });
+
+  const bx = x + 26;
+  const by = y + 66;
+  rectsAt(ctx, bx, by, [
+    [2, 0, 24, 4, '#2a1a14'],
+    [0, 4, 28, 3, '#8a2620'],
+    [1, 7, 26, 10, '#b83a2e'],
+    [10, 10, 8, 7, '#f2ead8'],
+    [11, 11, 6, 6, '#8a2620'],
+    [13, 11, 2, 6, '#f2ead8'],
+  ]);
+}
+
+// ---- La Huerta backyard ----
+
+function drawHorse(ctx, x, y) {
+  const BODY = '#6b4530';
+  const MANE = '#3a2417';
+  const HOOF = '#2a1a10';
+  rectsAt(ctx, x, y, [
+    [4, 6, 6, 3, MANE],
+    [8, 6, 16, 10, BODY],
+    [20, 2, 8, 8, BODY],
+    [18, 2, 4, 6, MANE],
+    [26, 4, 4, 3, MANE],
+    [6, 8, 4, 8, BODY],
+    [12, 14, 3, 6, BODY],
+    [18, 14, 3, 6, BODY],
+    [24, 14, 3, 6, BODY],
+    [6, 15, 4, 2, HOOF],
+    [12, 19, 3, 2, HOOF],
+    [18, 19, 3, 2, HOOF],
+    [24, 19, 3, 2, HOOF],
+  ]);
+}
+
+function drawGate(ctx, x, y) {
+  rectsAt(ctx, x, y, [
+    [0, 0, 16, 16, '#8a6a4a'],
+    [1, 2, 2, 12, '#5a3a1f'],
+    [13, 2, 2, 12, '#5a3a1f'],
+    [3, 6, 10, 2, '#5a3a1f'],
+    [3, 10, 10, 2, '#5a3a1f'],
+  ]);
+}
+
+function drawFencePost(ctx, x, y) {
+  rectsAt(ctx, x, y, [
+    [6, 0, 4, 16, '#8a5a2a'],
+    [0, 6, 16, 3, '#8a5a2a'],
+  ]);
+}
+
+function drawDirtGround(ctx) {
+  for (let row = 0; row < GRID_ROWS; row += 1) {
+    for (let col = 0; col < GRID_COLS; col += 1) {
+      const light = (col + row) % 2 === 0;
+      ctx.fillStyle = light ? '#b89a6a' : '#a8895a';
+      ctx.fillRect(col * TILE, row * TILE, TILE, TILE);
+    }
+  }
+}
+
 // ---- Ground painters ----
 
 function drawGrassGround(ctx) {
@@ -201,6 +324,16 @@ function drawGrassGround(ctx) {
     for (let col = 0; col < GRID_COLS; col += 1) {
       const light = (col + row) % 2 === 0;
       ctx.fillStyle = light ? '#5a8f4a' : '#4f7f41';
+      ctx.fillRect(col * TILE, row * TILE, TILE, TILE);
+    }
+  }
+}
+
+function drawPuebloGround(ctx) {
+  for (let row = 0; row < GRID_ROWS; row += 1) {
+    for (let col = 0; col < GRID_COLS; col += 1) {
+      const light = (col + row) % 2 === 0;
+      ctx.fillStyle = light ? '#c8ffb0' : '#bdf2a7';
       ctx.fillRect(col * TILE, row * TILE, TILE, TILE);
     }
   }
@@ -295,12 +428,83 @@ const MAPS = {
         labelSide: 'above',
       },
       {
+        id: 'Camino_a_Pueblo',
+        label: 'To Pueblo',
+        cols: [1],
+        rows: [4],
+        door: { col: 1, row: 4 },
+        paint: drawSignpost,
+        requiresFlag: 'road_to_pueblo_unlocked',
+      },
+      {
         id: 'Puerto_de_Veracruz',
         label: 'Puerto de Veracruz',
         cols: [6, 7, 8],
         rows: [3, 4],
         door: { col: 7, row: 5 },
         paint: drawPuerto,
+      },
+    ],
+  },
+  pueblo: {
+    playerStart: { col: 5, row: 7 },
+    drawGround: drawPuebloGround,
+    isTerrainBlocked: () => false,
+    decorations: [],
+    buildings: [
+      {
+        id: 'La_Huerta',
+        label: 'La Huerta',
+        cols: [0, 1, 2, 3, 4],
+        rows: [0, 1, 2, 3, 4],
+        door: { col: 2, row: 5 },
+        paint: drawHuerta,
+      },
+      {
+        id: 'El_Rancho',
+        label: 'El Rancho',
+        cols: [6, 7, 8, 9],
+        rows: [0, 1, 2],
+        door: { col: 7, row: 3 },
+        paint: drawRancho,
+      },
+      {
+        id: 'Fabrica_Textil',
+        label: 'Fábrica Textil',
+        cols: [6, 7, 8],
+        rows: [5, 6],
+        door: { col: 7, row: 7 },
+        paint: drawFabrica,
+      },
+    ],
+  },
+  la_huerta_backyard: {
+    playerStart: { col: 5, row: 6 },
+    drawGround: drawDirtGround,
+    isTerrainBlocked: () => false,
+    decorations: [
+      { paint: drawFencePost, x: 3 * TILE, y: 1 * TILE },
+      { paint: drawFencePost, x: 3 * TILE, y: 4 * TILE },
+      { paint: drawFencePost, x: 8 * TILE, y: 1 * TILE },
+      { paint: drawFencePost, x: 8 * TILE, y: 4 * TILE },
+    ],
+    buildings: [
+      {
+        id: 'Horse_Bojangles',
+        label: 'Bojangles',
+        cols: [4, 5],
+        rows: [2, 3],
+        door: { col: 5, row: 4 },
+        paint: drawHorse,
+      },
+      {
+        id: 'La_Huerta_Backyard_Exit',
+        label: 'exit',
+        cols: [5],
+        rows: [8],
+        door: { col: 5, row: 8 },
+        paint: drawGate,
+        labelSide: 'above',
       },
     ],
   },

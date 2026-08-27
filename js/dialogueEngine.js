@@ -4,11 +4,13 @@ const DialogueEngine = (() => {
   let els = null;
   let onClosed = () => {};
   let onGameOver = () => {};
+  let onEnterMap = () => {};
 
   function init(elements, callbacks) {
     els = elements;
     onClosed = callbacks.onClosed || onClosed;
     onGameOver = callbacks.onGameOver || onGameOver;
+    onEnterMap = callbacks.onEnterMap || onEnterMap;
   }
 
   function open(locationId) {
@@ -39,6 +41,12 @@ const DialogueEngine = (() => {
       onGameOver();
       return;
     }
+    if (typeof target === 'string' && target.startsWith('MAP:')) {
+      const mapId = target.slice(4);
+      close();
+      onEnterMap(mapId);
+      return;
+    }
     GameState.dialogue.nodeId = target;
     GameState.dialogue.sequenceIndex = 0;
     renderNode();
@@ -56,6 +64,11 @@ const DialogueEngine = (() => {
         : 'line-speech';
       els.text.appendChild(p);
     });
+    // Restart the update flash even when consecutive nodes render identical
+    // markup (e.g. the tequila loop), so every click visibly registers.
+    els.box.classList.remove('dialogue-flash');
+    void els.box.offsetWidth;
+    els.box.classList.add('dialogue-flash');
   }
 
   function clearInteraction() {
@@ -71,6 +84,7 @@ const DialogueEngine = (() => {
     clearInteraction();
 
     if (node.type === 'sequence') {
+      if (GameState.dialogue.sequenceIndex === 0 && node.effects) applyEffects(node.effects);
       renderSequenceStep(node);
       return;
     }

@@ -339,6 +339,7 @@ const DIALOGUE_TREES = {
         lines: [
           { type: 'speech', text: 'Ok, 100% trust you now. Head to Pueblo to find Father Hidalgo' },
         ],
+        effects: [{ set_flag: 'road_to_pueblo_unlocked' }],
         choices: [],
         autoExit: true,
       },
@@ -350,6 +351,208 @@ const DIALOGUE_TREES = {
           { text: 'try again', goto: 'iglesia_trivia_start' },
           { text: 'leave', goto: 'EXIT' },
         ],
+      },
+    },
+  },
+
+  El_Rancho_Sign: {
+    start: 'sign',
+    nodes: {
+      sign: {
+        lines: [
+          { type: 'narration', text: 'A wooden paneled sign reads:' },
+          { type: 'speech', text: 'Estas tierras tienen dueño. Ningún forastero pase sin permiso.' },
+        ],
+        choices: [],
+        autoExit: true,
+      },
+    },
+  },
+
+  La_Huerta_Sign: {
+    start: 'sign',
+    nodes: {
+      sign: {
+        lines: [
+          { type: 'narration', text: 'A sign reads:' },
+          { type: 'speech', text: 'no randos' },
+        ],
+        choices: [],
+        autoExit: true,
+      },
+    },
+  },
+
+  Fabrica_Textil: {
+    start: 'fabrica_textile_enter',
+    nodes: {
+      fabrica_textile_enter: {
+        lines: [
+          { type: 'narration', text: 'You see various fabrics being woven out of silk and wool, and a man leaning over a desk reading documents.' },
+        ],
+        choices: [
+          { text: 'approach el Jefe', goto: 'jefe_greeting' },
+          { text: 'leave', goto: 'EXIT' },
+        ],
+      },
+      jefe_greeting: {
+        type: 'sequence',
+        steps: [
+          { type: 'narration', text: 'You approach el Jefe. He is stacking documents with the word "Independencia" as a heading.' },
+          { speaker: 'El Jefe', type: 'speech', text: 'Who are you? And what do you want?' },
+        ],
+        choices: [
+          { text: "And I'm looking for Father Hidalgo, a priest in Veracruz told me he was here. I'm just a guy", goto: 'jefe_independence' },
+          { text: 'My name is Chris Bosh', goto: 'jefe_chris_bosh' },
+        ],
+      },
+      jefe_independence: {
+        speaker: 'El Jefe',
+        lines: [
+          { type: 'speech', text: "He's in Dolores now. I'll tell you how to get there if you help me distribute these documents across town." },
+        ],
+        choices: [
+          { text: 'Sure thing Jefe', goto: 'jefe_map_distribution' },
+          { text: 'That sounds like a lot of work. No thanks', goto: 'EXIT' },
+        ],
+      },
+      jefe_map_distribution: {
+        speaker: 'El Jefe',
+        lines: [
+          { type: 'action', text: 'He hands you a stack of papers.' },
+          { type: 'speech', text: 'Start with the owner of El Rancho.' },
+        ],
+        effects: [{ give_item: 'jefe_documents' }, { set_flag: 'pueblo_rancho_unlocked' }],
+        choices: [],
+        autoExit: true,
+      },
+      jefe_chris_bosh: {
+        speaker: 'El Jefe',
+        lines: [
+          { type: 'speech', text: "That is not your name. You're a liar, and a horseneck, get out of my factory." },
+        ],
+        choices: [],
+        autoExit: true,
+      },
+    },
+  },
+
+  El_Rancho: {
+    start: 'El_rancho_greeting',
+    nodes: {
+      El_rancho_greeting: {
+        type: 'sequence',
+        steps: [
+          { speaker: 'Ranchero', type: 'speech', text: 'I saw you come into town earlier.' },
+          { speaker: 'Ranchero', type: 'action', text: 'He looks at your stack of papers.' },
+          { speaker: 'Ranchero', type: 'speech', text: 'What did el Jefe give you?' },
+        ],
+        choices: [
+          { text: 'hand over a document', goto: 'el_rancho_document' },
+          { text: "he told me to distribute these across town and he'd tell me how to get to Dolores", goto: 'el_rancho_dolores' },
+        ],
+      },
+      el_rancho_document: {
+        speaker: 'Ranchero',
+        lines: [
+          { type: 'speech', text: 'Why are you helping him distribute these?' },
+        ],
+        choices: [
+          { text: "I'm trying to find a priest named Miguel Hidalgo. El Jefe said he was in Dolores and he'd give me a map if I helped him.", goto: 'el_rancho_dolores' },
+          { text: "I'm just a really nice person looking to make friends", goto: 'el_rancho_dolores' },
+        ],
+      },
+      el_rancho_dolores: {
+        type: 'sequence',
+        steps: [
+          { speaker: 'Ranchero', type: 'speech', text: "Give them to me, I'll get these passed out across town." },
+          { speaker: 'Ranchero', type: 'action', text: 'He takes the stack from you.' },
+          { speaker: 'Ranchero', type: 'speech', text: "El Jefe has no idea how to get to Dolores. He scammed you. Go talk to El Dueño de La Huerta. He will give you a map and a horse that I've lent him." },
+          { speaker: 'Ranchero', type: 'speech', text: 'Oh, I almost forgot.' },
+          { speaker: 'Ranchero', type: 'action', text: 'He hands you a bottle of tequila and a box of six baby chicks. "Make sure you present these to el Dueño when you get there."' },
+          { type: 'narration', text: 'You receive a box of baby chicks and a bottle of tequila.' },
+        ],
+        effects: [{ give_item: 'tequila_bottle' }, { give_item: 'baby_chicks' }, { set_flag: 'pueblo_huerta_unlocked' }],
+        goto: 'EXIT',
+      },
+    },
+  },
+
+  La_Huerta: {
+    start: 'La_huerta_greeting',
+    nodes: {
+      La_huerta_greeting: {
+        speaker: 'El Dueño',
+        lines: [
+          { type: 'speech', text: 'Who do you know here?' },
+        ],
+        choices: [
+          { text: 'El Ranchero sent me (hand over tequila and baby chicks)', goto: 'la_huerta_welcome' },
+          { text: 'I know Chris Bosh and the Horseneck Ranchero. They said you could help me get to Dolores', goto: 'la_huerta_not_welcome' },
+        ],
+      },
+      la_huerta_not_welcome: {
+        speaker: 'El Dueño',
+        lines: [
+          { type: 'speech', text: 'You, a rando, show up to my house without any chicks or alcohol and expect me to help you out. Get out of my face.' },
+        ],
+        choices: [],
+        autoExit: true,
+      },
+      la_huerta_welcome: {
+        speaker: 'El Dueño',
+        lines: [
+          { type: 'speech', text: 'Anyone who shows up to my house with chicks and alcohol is a friend. How can I be of service?' },
+        ],
+        effects: [{ remove_item: 'tequila_bottle' }, { remove_item: 'baby_chicks' }],
+        choices: [
+          { text: "I'm looking for directions to Dolores. Can you help me?", goto: 'la_huerta_dolores_directions' },
+          { text: "I'm supposed to get to Dolores but I'm kinda down to shoot some tequila real quick. You wanna start drinking?", goto: 'la_huerta_drinking' },
+        ],
+      },
+      la_huerta_dolores_directions: {
+        type: 'sequence',
+        steps: [
+          { speaker: 'El Dueño', type: 'action', text: 'He hands over a map.' },
+          { speaker: 'El Dueño', type: 'speech', text: "Also, why don't you borrow the stallion out back? His name is Bojangles. Good luck." },
+        ],
+        effects: [{ give_item: 'dolores_map' }],
+        goto: 'MAP:la_huerta_backyard',
+      },
+      la_huerta_drinking: {
+        speaker: 'El Dueño',
+        lines: [
+          { type: 'speech', text: "Man, I've been drinking." },
+          { type: 'action', text: 'He takes a pull from the tequila bottle and passes it back to you.' },
+        ],
+        choices: [
+          { text: 'start chugging tequila', goto: 'la_huerta_game_over_1' },
+        ],
+      },
+      la_huerta_game_over_1: {
+        lines: [{ type: 'narration', text: 'You take a swig of tequila.' }],
+        choices: [{ text: 'chug more tequila', goto: 'la_huerta_game_over_2' }],
+      },
+      la_huerta_game_over_2: {
+        lines: [{ type: 'narration', text: 'You take another swig. It burns going down.' }],
+        choices: [{ text: 'chug more tequila', goto: 'la_huerta_game_over_3' }],
+      },
+      la_huerta_game_over_3: {
+        lines: [{ type: 'narration', text: 'Your vision starts to blur at the edges.' }],
+        choices: [{ text: 'chug more tequila', goto: 'la_huerta_game_over_4' }],
+      },
+      la_huerta_game_over_4: {
+        lines: [{ type: 'narration', text: 'The room is spinning a little now.' }],
+        choices: [{ text: 'chug more tequila', goto: 'la_huerta_game_over_5' }],
+      },
+      la_huerta_game_over_5: {
+        lines: [{ type: 'narration', text: "You can barely stand, but you keep drinking." }],
+        choices: [{ text: 'chug more tequila', goto: 'la_huerta_training_complete' }],
+      },
+      la_huerta_training_complete: {
+        lines: [{ type: 'narration', text: 'Good job, you are no longer in training.' }],
+        choices: [],
+        autoExit: true,
       },
     },
   },

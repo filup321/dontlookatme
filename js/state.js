@@ -24,6 +24,10 @@ function applyEffects(effects) {
   if (!effects) return;
   effects.forEach((effect) => {
     if (effect.give_item) GameState.inventory.push(effect.give_item);
+    if (effect.remove_item) {
+      const idx = GameState.inventory.indexOf(effect.remove_item);
+      if (idx !== -1) GameState.inventory.splice(idx, 1);
+    }
     if (effect.remove_silver_reales) {
       GameState.silverReales -= effect.remove_silver_reales;
     }

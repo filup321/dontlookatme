@@ -26,6 +26,7 @@
   ];
 
   const screens = {
+    menu: document.getElementById('screen-menu'),
     intro: document.getElementById('screen-intro'),
     map: document.getElementById('screen-map'),
     road: document.getElementById('screen-road'),
@@ -275,6 +276,26 @@
     IntroSequence.show('intro1');
   });
 
+  // Landing page / main menu. Each button hands off to an entry point that
+  // already exists below; the menu only gates which one runs first.
+  function showMenu() {
+    GameState.screen = 'menu';
+    dpad.classList.add('hidden');
+    roadControls.classList.add('hidden');
+    showScreen('menu');
+  }
+
+  function startNewGame() {
+    resetGame();
+    dpad.classList.add('hidden');
+    showScreen('intro');
+    IntroSequence.show('intro1');
+  }
+
+  document.getElementById('menu-new-game').addEventListener('click', startNewGame);
+  document.getElementById('menu-minigame-1').addEventListener('click', startRoadToVeracruz);
+  document.getElementById('menu-minigame-2').addEventListener('click', startRoadToPueblo);
+
   const startMapId = new URLSearchParams(window.location.search).get('start');
   if (startMapId && MAPS[startMapId]) {
     if (startMapId === 'pueblo') {
@@ -283,7 +304,6 @@
     }
     enterMap(startMapId);
   } else {
-    showScreen('intro');
-    IntroSequence.show('intro1');
+    showMenu();
   }
 })();

@@ -1,7 +1,7 @@
 // Game state and effect application
 
 const GameState = {
-  screen: 'intro1', // intro1 | intro2 | map | travel | road | gameover
+  screen: 'menu', // menu | intro1 | intro2 | map | travel | road | gameover
   currentMap: null, // 'valladolid' | 'veracruz'
   player: { col: 5, row: 7, dir: 'down' },
   inventory: [],

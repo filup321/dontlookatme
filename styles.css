@@ -325,6 +325,125 @@ body {
   }
 }
 
+/* Main menu / landing screen — antique hand-drawn map of Mexico */
+#screen-menu {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 7%;
+  padding: 9%;
+  overflow: hidden;
+  background-color: #d8c096;
+  background-image:
+    radial-gradient(ellipse at 18% 12%, rgba(120, 82, 40, 0.28), transparent 55%),
+    radial-gradient(ellipse at 86% 22%, rgba(90, 58, 26, 0.24), transparent 50%),
+    radial-gradient(ellipse at 74% 88%, rgba(120, 82, 40, 0.30), transparent 55%),
+    radial-gradient(ellipse at 26% 78%, rgba(150, 110, 60, 0.22), transparent 52%),
+    radial-gradient(circle at 50% 45%, rgba(247, 238, 214, 0.35), transparent 60%),
+    linear-gradient(135deg, #e7d6ac 0%, #d8c096 45%, #c2a366 100%);
+}
+
+/* Weathered paper grain */
+#screen-menu::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
+  mix-blend-mode: multiply;
+  opacity: 0.14;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='140' height='140' filter='url(%23n)' opacity='0.55'/%3E%3C/svg%3E");
+}
+
+/* Decorative Aztec-style stepped-fret border, drawn with border-image */
+.menu-greca {
+  position: absolute;
+  inset: 5px;
+  z-index: 3;
+  pointer-events: none;
+  border: 13px solid transparent;
+  border-image-source: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='48' height='48' viewBox='0 0 48 48'%3E%3Cg fill='none' stroke='%235a3a1a' stroke-linecap='square'%3E%3Cpath stroke-width='1.5' d='M1 1H47V47H1Z'/%3E%3Cpath stroke-width='1.5' d='M15 15H33V33H15Z'/%3E%3Cg stroke-width='2'%3E%3Cpath d='M0 12H4V4H12V12H20V4H28V12H36V4H44V12H48'/%3E%3Cpath d='M0 36H4V44H12V36H20V44H28V36H36V44H44V36H48'/%3E%3Cpath d='M12 0V4H4V12H12V20H4V28H12V36H4V44H12V48'/%3E%3Cpath d='M36 0V4H44V12H36V20H44V28H36V36H44V44H36V48'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+  border-image-slice: 16;
+  border-image-repeat: round;
+}
+
+.menu-compass {
+  position: absolute;
+  right: 7%;
+  bottom: 7%;
+  width: clamp(38px, 11vw, 70px);
+  height: auto;
+  z-index: 2;
+  opacity: 0.72;
+}
+
+.menu-content {
+  position: relative;
+  z-index: 4;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 9%;
+  width: 100%;
+}
+
+.menu-title {
+  margin: 0;
+  text-align: center;
+  font-family: Georgia, 'Times New Roman', serif;
+  font-weight: 700;
+  font-size: clamp(20px, 7vw, 44px);
+  letter-spacing: 0.14em;
+  color: #4a3016;
+  transform: rotate(-1.5deg);
+  text-shadow:
+    1px 1px 0 rgba(247, 238, 214, 0.55),
+    2px 3px 4px rgba(74, 48, 22, 0.32);
+}
+
+.menu-title-sub {
+  display: block;
+  margin-top: 0.15em;
+  font-size: 0.42em;
+  letter-spacing: 0.4em;
+  color: #6b4a2a;
+}
+
+.menu-buttons {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: clamp(7px, 2.4vw, 14px);
+  width: 100%;
+}
+
+.menu-btn {
+  font-family: Georgia, 'Times New Roman', serif;
+  font-size: clamp(9px, 2.3vw, 15px);
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  color: #1a1a1a;
+  background: #f5ecd7;
+  border: 3px solid #6b4a2a;
+  border-radius: 1px;
+  padding: 8px 16px;
+  min-width: 66%;
+  max-width: 92%;
+  text-align: center;
+  cursor: pointer;
+  box-shadow: 3px 3px 0 rgba(74, 48, 22, 0.55);
+}
+
+.menu-btn:hover {
+  background: #fdf6e6;
+}
+
+.menu-btn:active {
+  transform: translate(2px, 2px);
+  box-shadow: 1px 1px 0 rgba(74, 48, 22, 0.55);
+}
+
 /* Game over */
 #screen-gameover {
   display: flex;

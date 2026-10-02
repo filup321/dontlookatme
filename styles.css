@@ -112,27 +112,54 @@ body {
   width: min(94vw, 640px);
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  justify-content: center;
+  gap: clamp(14px, 5vw, 40px);
 }
 
 .road-lane-btns {
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 10px;
 }
 
 .road-lane-btns .dpad-btn {
-  width: 40px;
-  height: 40px;
+  width: 60px;
+  height: 60px;
+  font-size: 24px;
 }
 
 .road-action-btns {
   display: flex;
-  gap: 10px;
+  gap: 12px;
 }
 
 .road-action-btn {
-  min-width: 72px;
+  min-width: 92px;
+  padding: 14px 18px;
+  font-size: clamp(13px, 3.4vw, 16px);
+}
+
+/* Phone: cluster all four controls tight and centered so the whole
+   mini-game is playable with one thumb. */
+@media (max-width: 560px) {
+  #road-controls {
+    gap: 12px;
+  }
+
+  .road-lane-btns .dpad-btn {
+    width: 68px;
+    height: 68px;
+  }
+
+  .road-action-btns {
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .road-action-btn {
+    min-width: 104px;
+    padding: 18px 20px;
+  }
 }
 
 #road-lose-overlay {

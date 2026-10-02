@@ -295,6 +295,9 @@
   document.getElementById('menu-new-game').addEventListener('click', startNewGame);
   document.getElementById('menu-minigame-1').addEventListener('click', startRoadToVeracruz);
   document.getElementById('menu-minigame-2').addEventListener('click', startRoadToPueblo);
+  document.getElementById('menu-minigame-3').addEventListener('click', () => {
+    window.location.href = 'memory-game/index.html';
+  });
 
   const startMapId = new URLSearchParams(window.location.search).get('start');
   if (startMapId && MAPS[startMapId]) {

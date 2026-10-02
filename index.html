@@ -1,107 +1,645 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Mexico 1810</title>
-  <link rel="stylesheet" href="styles.css?v=4" />
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Memory Game</title>
+<style>
+  :root {
+    --bg: #1b1e2b;
+    --panel: #262a3d;
+    --accent: #4285F4;
+    --accent-hover: #5b96f5;
+    --text: #f2f3f7;
+    --muted: #9aa0b4;
+    --correct: #38a169;
+    --incorrect: #e53e3e;
+    --cell-bg: #ffffff;
+  }
+
+  * { box-sizing: border-box; }
+
+  html, body {
+    margin: 0;
+    padding: 0;
+    height: 100%;
+    background: var(--bg);
+    color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
+  }
+
+  #app {
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 16px;
+  }
+
+  .screen {
+    display: none;
+    width: 100%;
+    max-width: 720px;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    gap: 20px;
+  }
+
+  .screen.active { display: flex; }
+
+  h1 { font-size: 2.2rem; margin: 0 0 4px; }
+  h2 { font-size: 1.6rem; margin: 0; }
+  p { color: var(--muted); line-height: 1.5; margin: 0; }
+
+  .menu-buttons, .feedback-buttons, .uc-buttons {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    width: 100%;
+    max-width: 320px;
+  }
+
+  button {
+    font-size: 1.1rem;
+    font-weight: 600;
+    padding: 14px 24px;
+    border-radius: 10px;
+    border: none;
+    background: var(--accent);
+    color: white;
+    cursor: pointer;
+    transition: background 0.15s ease, transform 0.1s ease;
+  }
+
+  button:hover { background: var(--accent-hover); }
+  button:active { transform: scale(0.97); }
+
+  button.secondary {
+    background: transparent;
+    border: 2px solid var(--muted);
+    color: var(--text);
+  }
+
+  button.secondary:hover { border-color: var(--text); background: rgba(255,255,255,0.05); }
+
+  button:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+  }
+
+  /* Progress bar */
+  .progress-track {
+    width: 100%;
+    max-width: 640px;
+    height: 14px;
+    background: var(--panel);
+    border-radius: 999px;
+    overflow: hidden;
+    border: 1px solid rgba(255,255,255,0.08);
+  }
+
+  .progress-fill {
+    height: 100%;
+    width: 100%;
+    background: linear-gradient(90deg, #4285F4, #34a853);
+    border-radius: 999px;
+  }
+
+  /* Grid */
+  .grid {
+    display: grid;
+    gap: 10px;
+    width: 100%;
+    max-width: 520px;
+    aspect-ratio: 1 / 1;
+  }
+
+  .grid[data-size="2"] { grid-template-columns: repeat(2, 1fr); grid-template-rows: repeat(2, 1fr); }
+  .grid[data-size="3"] { grid-template-columns: repeat(3, 1fr); grid-template-rows: repeat(3, 1fr); }
+
+  .cell {
+    background: var(--cell-bg);
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+    position: relative;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.25);
+  }
+
+  .cell img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    padding: 8px;
+  }
+
+  .cell .cell-text {
+    font-size: clamp(1.2rem, 6vw, 2.2rem);
+    font-weight: 700;
+    color: #1b1e2b;
+    padding: 6px;
+    word-break: break-word;
+  }
+
+  .cell svg {
+    width: 70%;
+    height: 70%;
+  }
+
+  /* Blackout */
+  #screen-blackout {
+    background: black;
+    position: fixed;
+    inset: 0;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    z-index: 50;
+    max-width: none;
+  }
+
+  #screen-blackout.active { display: flex; }
+
+  /* Question */
+  .question-text {
+    font-size: 1.4rem;
+    font-weight: 600;
+  }
+
+  #answer-input {
+    width: 100%;
+    max-width: 320px;
+    padding: 14px 16px;
+    font-size: 1.1rem;
+    border-radius: 10px;
+    border: 2px solid var(--panel);
+    background: var(--panel);
+    color: var(--text);
+    text-align: center;
+  }
+
+  #answer-input:focus {
+    outline: none;
+    border-color: var(--accent);
+  }
+
+  .feedback-result {
+    font-size: 1.8rem;
+    font-weight: 800;
+  }
+
+  .feedback-result.correct { color: var(--correct); }
+  .feedback-result.incorrect { color: var(--incorrect); }
+
+  .mode-badge {
+    display: inline-block;
+    padding: 4px 14px;
+    border-radius: 999px;
+    background: var(--panel);
+    color: var(--muted);
+    font-size: 0.85rem;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+  }
+
+  .streak-bar {
+    display: none;
+    position: fixed;
+    bottom: 24px;
+    left: 50%;
+    transform: translateX(-50%);
+    padding: 8px 20px;
+    border-radius: 999px;
+    background: var(--panel);
+    color: var(--text);
+    font-weight: 700;
+    letter-spacing: 0.02em;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.3);
+    z-index: 60;
+  }
+
+  .streak-bar.visible { display: block; }
+
+  #streak-count { color: var(--accent); }
+
+  .back-link { color: var(--muted); text-decoration: none; font-weight: 600; }
+  .back-link:hover { color: var(--text); }
+</style>
 </head>
 <body>
-  <div id="game-wrapper">
-    <div id="game-root">
-      <div id="screen-menu" class="screen">
-        <div class="menu-greca" aria-hidden="true"></div>
+<div id="app">
 
-        <svg class="menu-compass" viewBox="0 0 100 100" aria-hidden="true">
-          <g fill="none" stroke="#5a3a1a" stroke-width="2">
-            <circle cx="50" cy="50" r="34" />
-            <circle cx="50" cy="50" r="25" />
-            <path d="M50 4 L50 96 M4 50 L96 50 M19 19 L81 81 M81 19 L19 81" stroke-width="1" />
-          </g>
-          <path d="M50 8 L57 50 L50 42 L43 50 Z" fill="#5a3a1a" />
-          <path d="M50 92 L43 50 L50 58 L57 50 Z" fill="#9c7a48" />
-          <path d="M8 50 L50 43 L42 50 L50 57 Z" fill="#9c7a48" />
-          <path d="M92 50 L50 57 L58 50 L50 43 Z" fill="#9c7a48" />
-          <circle cx="50" cy="50" r="4" fill="#5a3a1a" />
-          <text x="50" y="21" text-anchor="middle" font-family="Georgia, serif"
-                font-size="13" font-weight="700" fill="#5a3a1a">N</text>
-        </svg>
+  <section class="screen active" id="screen-menu">
+    <h1>Memory Game</h1>
+    <p>Pick a difficulty to begin.</p>
+    <div class="menu-buttons" id="menu-buttons"></div>
+    <a class="back-link" href="../mexico-1810.html">&larr; Back to México 1810</a>
+  </section>
 
-        <div class="menu-content">
-          <h1 class="menu-title">México<span class="menu-title-sub">&mdash; 1810 &mdash;</span></h1>
-          <nav class="menu-buttons">
-            <button id="menu-new-game" class="menu-btn" type="button">New Game</button>
-            <button id="menu-minigame-1" class="menu-btn" type="button">Minigame&nbsp;#1 &mdash; Spikey Adventure</button>
-            <button id="menu-minigame-2" class="menu-btn" type="button">Minigame&nbsp;#2 &mdash; Bandits and Other Things</button>
-          </nav>
-        </div>
-      </div>
+  <section class="screen" id="screen-instructions">
+    <span class="mode-badge" id="instructions-mode-badge"></span>
+    <h2>Rules</h2>
+    <p id="instructions-text"></p>
+    <p>Good luck!</p>
+    <button id="btn-start-round">Start</button>
+    <button class="secondary" id="btn-instructions-back">Back</button>
+  </section>
 
-      <div id="screen-intro" class="screen hidden">
-        <div id="intro-text"></div>
-        <div class="intro-button-row">
-          <button id="intro-button" class="pixel-btn" type="button"></button>
-        </div>
-      </div>
-
-      <div id="screen-map" class="screen hidden">
-        <canvas id="game-canvas" width="160" height="144"></canvas>
-        <div id="map-labels"></div>
-        <div id="dialogue-overlay" class="screen hidden">
-          <div id="dialogue-box" class="dialogue-box">
-            <div id="dialogue-speaker"></div>
-            <div id="dialogue-text"></div>
-            <div id="dialogue-choices" class="hidden"></div>
-            <form id="dialogue-input-form" class="hidden">
-              <input id="dialogue-input-field" type="text" autocomplete="off" />
-              <button class="pixel-btn" type="submit">say</button>
-            </form>
-            <div id="dialogue-continue" class="hidden"></div>
-          </div>
-        </div>
-      </div>
-
-      <div id="screen-road" class="screen hidden">
-        <canvas id="road-canvas" width="160" height="144"></canvas>
-        <div id="road-lose-overlay" class="screen hidden">
-          <div class="road-lose-box">
-            <div id="road-lose-text"></div>
-            <button id="road-try-again-button" class="pixel-btn" type="button">try again</button>
-          </div>
-        </div>
-      </div>
-
-      <div id="screen-gameover" class="screen hidden">
-        <button id="play-again-button" class="pixel-btn" type="button">play again</button>
-      </div>
+  <section class="screen" id="screen-study">
+    <span class="mode-badge" id="study-mode-badge"></span>
+    <div class="progress-track">
+      <div class="progress-fill" id="progress-fill"></div>
     </div>
+    <div class="grid" id="study-grid" data-size="2"></div>
+  </section>
 
-    <div id="dpad" class="hidden">
-      <button id="dpad-up" class="dpad-btn dpad-up" type="button" aria-label="Move up">&#9650;</button>
-      <button id="dpad-left" class="dpad-btn dpad-left" type="button" aria-label="Move left">&#9664;</button>
-      <button id="dpad-right" class="dpad-btn dpad-right" type="button" aria-label="Move right">&#9654;</button>
-      <button id="dpad-down" class="dpad-btn dpad-down" type="button" aria-label="Move down">&#9660;</button>
+  <section class="screen" id="screen-question">
+    <span class="mode-badge" id="question-mode-badge"></span>
+    <h2 class="question-text" id="question-text"></h2>
+    <input type="text" id="answer-input" placeholder="Type your answer" autocomplete="off">
+    <button id="btn-submit-answer">Submit</button>
+  </section>
+
+  <section class="screen" id="screen-feedback">
+    <div class="feedback-result" id="feedback-result"></div>
+    <p id="feedback-detail"></p>
+    <div class="feedback-buttons" id="feedback-buttons">
+      <button id="btn-play-again">Play Again</button>
+      <button class="secondary" id="btn-feedback-menu">Main Menu</button>
     </div>
+  </section>
 
-    <div id="road-controls" class="hidden">
-      <div class="road-lane-btns">
-        <button id="road-up" class="dpad-btn" type="button" aria-label="Move up">&#9650;</button>
-        <button id="road-down" class="dpad-btn" type="button" aria-label="Move down">&#9660;</button>
-      </div>
-      <div class="road-action-btns">
-        <button id="road-shoot" class="pixel-btn road-action-btn" type="button">shoot</button>
-        <button id="road-jump" class="pixel-btn road-action-btn" type="button">jump</button>
-      </div>
+  <section class="screen" id="screen-under-construction">
+    <h2>🚧 Under Construction 🚧</h2>
+    <p id="uc-text">This mode isn't ready yet — check back soon!</p>
+    <div class="uc-buttons">
+      <button id="btn-uc-back">Back to Menu</button>
     </div>
-  </div>
+  </section>
 
-  <script src="js/state.js?v=25"></script>
-  <script src="js/dialogueData.js?v=25"></script>
-  <script src="js/dialogueEngine.js?v=25"></script>
-  <script src="js/intro.js?v=25"></script>
-  <script src="js/map.js?v=25"></script>
-  <script src="js/roadgame.js?v=25"></script>
-  <script src="js/nightroadgame.js?v=25"></script>
-  <script src="js/main.js?v=25"></script>
+</div>
+
+<div class="streak-bar" id="streak-bar">Streak: <span id="streak-count">0</span></div>
+
+<div class="screen" id="screen-blackout"></div>
+
+<script>
+(function () {
+  "use strict";
+
+  // ===================== SECTION B1: CONTENT DATA =====================
+
+  const GRID2X2 = [
+    {"slide":1,"cells":{"topLeft":{"type":"photo","value":"image1.png","answer":"pig"},"topRight":{"type":"shape","value":{"geom":"rect","color":"FFFF00"},"answer":"rectangle"},"bottomLeft":{"type":"text","value":"oink","answer":"oink"},"bottomRight":{"type":"text","value":"9","answer":"9"}}},
+    {"slide":2,"cells":{"topLeft":{"type":"text","value":"3","answer":"3"},"topRight":{"type":"photo","value":"image3.png","answer":"gorilla"},"bottomLeft":{"type":"shape","value":{"geom":"ellipse","color":"4285F4"},"answer":"circle"},"bottomRight":{"type":"text","value":"moo","answer":"moo"}}},
+    {"slide":3,"cells":{"topLeft":{"type":"text","value":"6","answer":"6"},"topRight":{"type":"text","value":"yes","answer":"yes"},"bottomLeft":{"type":"photo","value":"image2.png","answer":"panda"},"bottomRight":{"type":"shape","value":{"geom":"triangle","color":"FF0000"},"answer":"triangle"}}},
+    {"slide":4,"cells":{"topLeft":{"type":"text","value":"2","answer":"two"},"topRight":{"type":"shape","value":{"geom":"heart","color":"9900FF"},"answer":"purple"},"bottomLeft":{"type":"photo","value":"image8.png","answer":"rhino"},"bottomRight":{"type":"text","value":"eye","answer":"eye"}}},
+    {"slide":5,"cells":{"topLeft":{"type":"photo","value":"image4.png","answer":"elephant"},"topRight":{"type":"shape","value":{"geom":"lightningBolt","color":"FF0000"},"answer":"lightning bolt"},"bottomLeft":{"type":"text","value":"potter","answer":"potter"},"bottomRight":{"type":"text","value":"2","answer":"two"}}},
+    {"slide":6,"cells":{"topLeft":{"type":"text","value":"moon","answer":"moon"},"topRight":{"type":"text","value":"8","answer":"8"},"bottomLeft":{"type":"shape","value":{"geom":"sun","color":"FF9900"},"answer":"sun"},"bottomRight":{"type":"photo","value":"image10.png","answer":"zebra"}}},
+    {"slide":7,"cells":{"topLeft":{"type":"text","value":"5","answer":"5"},"topRight":{"type":"photo","value":"image5.png","answer":"horse"},"bottomLeft":{"type":"text","value":"dog","answer":"dog"},"bottomRight":{"type":"shape","value":{"geom":"cloud","color":"EEEEEE"},"answer":"cloud"}}},
+    {"slide":8,"cells":{"topLeft":{"type":"shape","value":{"geom":"smileyFace","color":"FFFF00"},"answer":"smiley face"},"topRight":{"type":"text","value":"7","answer":"7"},"bottomLeft":{"type":"photo","value":"image6.png","answer":"cow"},"bottomRight":{"type":"text","value":"zero","answer":"zero"}}}
+  ];
+
+  const GRID3X3 = [
+    {"slide":1,"cells":{"topLeft":{"type":"photo","value":"image16.png","answer":"Rooster"},"topMiddle":{"type":"shape","value":{"geom":"cube","color":"38761D"},"answer":"Cube"},"topRight":{"type":"shape","value":{"geom":"heart","color":"9900FF"},"answer":"Heart"},"middleLeft":{"type":"text","value":"1","answer":"one(1)"},"middleMiddle":{"type":"photo","value":"image3.png","answer":"gorrilla"},"middleRight":{"type":"text","value":"red","answer":"red"},"bottomLeft":{"type":"text","value":"%","answer":"percent(division/divide-by sign)"},"bottomMiddle":{"type":"shape","value":{"geom":"ellipse","color":"4285F4"},"answer":"circle"},"bottomRight":{"type":"text","value":"00","answer":"double-zero(00)"}}},
+    {"slide":2,"cells":{"topLeft":{"type":"photo","value":"image1.png","answer":"pig"},"topMiddle":{"type":"text","value":"40","answer":"40(forty)"},"topRight":{"type":"text","value":"2","answer":"two(2)"},"middleLeft":{"type":"shape","value":{"geom":"rect","color":"FFFF00"},"answer":"rectangle"},"middleMiddle":{"type":"text","value":"blue","answer":"blue"},"middleRight":{"type":"photo","value":"image12.png","answer":"california"},"bottomLeft":{"type":"text","value":"$","answer":"dollar sign"},"bottomMiddle":{"type":"shape","value":{"geom":"lightningBolt","color":"FF0000"},"answer":"lightning bolt"},"bottomRight":{"type":"text","value":"?","answer":"question mark"}}},
+    {"slide":3,"cells":{"topLeft":{"type":"text","value":"23","answer":"23(twenty-three)"},"topMiddle":{"type":"text","value":"?","answer":"question mark"},"topRight":{"type":"text","value":"!","answer":"exclamation point"},"middleLeft":{"type":"photo","value":"image11.png","answer":"giraffe"},"middleMiddle":{"type":"photo","value":"image9.png","answer":"hawaii"},"middleRight":{"type":"photo","value":"image6.png","answer":"cow"},"bottomLeft":{"type":"shape","value":{"geom":"triangle","color":"FF0000"},"answer":"triangle"},"bottomMiddle":{"type":"photo","value":"image7.png","answer":"apple"},"bottomRight":{"type":"text","value":"32","answer":"32(thirty-two)"}}},
+    {"slide":4,"cells":{"topLeft":{"type":"photo","value":"image2.png","answer":"panda"},"topMiddle":{"type":"photo","value":"image17.png","answer":"dog"},"topRight":{"type":"text","value":"121","answer":"121"},"middleLeft":{"type":"shape","value":{"geom":"triangle","color":"FF0000"},"answer":"triangle"},"middleMiddle":{"type":"text","value":"12","answer":"12"},"middleRight":{"type":"text","value":"#","answer":"number sign"},"bottomLeft":{"type":"photo","value":"image15.png","answer":"hamburger"},"bottomMiddle":{"type":"shape","value":{"geom":"smileyFace","color":"FFFF00"},"answer":"smiley face"},"bottomRight":{"type":"photo","value":"image13.png","answer":"texas"}}},
+    {"slide":5,"cells":{"topLeft":{"type":"photo","value":"image14.png","answer":"florida"},"topMiddle":{"type":"photo","value":"image20.png","answer":"hot dog"},"topRight":{"type":"shape","value":{"geom":"cube","color":"38761D"},"answer":"cube"},"middleLeft":{"type":"text","value":"@","answer":"@"},"middleMiddle":{"type":"shape","value":{"geom":"mathPlus","color":"000000"},"answer":"plus(addition)"},"middleRight":{"type":"text","value":"70","answer":"70"},"bottomLeft":{"type":"photo","value":"image10.png","answer":"zebra"},"bottomMiddle":{"type":"photo","value":"image21.png","answer":"cat"},"bottomRight":{"type":"text","value":"88","answer":"88"}}},
+    {"slide":6,"cells":{"topLeft":{"type":"text","value":"ouch","answer":"ouch"},"topMiddle":{"type":"text","value":"49","answer":"49"},"topRight":{"type":"photo","value":"image5.png","answer":"horse"},"middleLeft":{"type":"shape","value":{"geom":"mathDivide","color":"000000"},"answer":"division"},"middleMiddle":{"type":"shape","value":{"geom":"ellipse","color":"4285F4"},"answer":"circle"},"middleRight":{"type":"shape","value":{"geom":"sun","color":"FF9900"},"answer":"sun"},"bottomLeft":{"type":"photo","value":"image25.png","answer":"alaska"},"bottomMiddle":{"type":"text","value":"222","answer":"222"},"bottomRight":{"type":"photo","value":"image18.png","answer":"french fries"}}},
+    {"slide":7,"cells":{"topLeft":{"type":"text","value":"54","answer":"54"},"topMiddle":{"type":"text","value":"6","answer":"6"},"topRight":{"type":"photo","value":"image22.png","answer":"taco"},"middleLeft":{"type":"photo","value":"image19.png","answer":"new york"},"middleMiddle":{"type":"photo","value":"image4.png","answer":"elephant"},"middleRight":{"type":"shape","value":{"geom":"mathPlus","color":"000000"},"answer":"plus"},"bottomLeft":{"type":"text","value":"NO","answer":"no"},"bottomMiddle":{"type":"shape","value":{"geom":"rect","color":"FFFF00"},"answer":"rectangle"},"bottomRight":{"type":"shape","value":{"geom":"cloud","color":"EEEEEE"},"answer":"cloud(smoke)"}}},
+    {"slide":8,"cells":{"topLeft":{"type":"shape","value":{"geom":"star5","color":"0000FF"},"answer":"star"},"topMiddle":{"type":"text","value":"GO","answer":"go"},"topRight":{"type":"photo","value":"image24.png","answer":"apple"},"middleLeft":{"type":"photo","value":"image23.png","answer":"united states"},"middleMiddle":{"type":"text","value":"00","answer":"0"},"middleRight":{"type":"text","value":"89","answer":"89"},"bottomLeft":{"type":"photo","value":"image8.png","answer":"rhino"},"bottomMiddle":{"type":"photo","value":"image26.png","answer":"parrot"},"bottomRight":{"type":"shape","value":{"geom":"rect","color":"FFFF00"},"answer":"rectangle"}}}
+  ];
+
+  // ===================== SECTION B2: MODES CONFIG =====================
+
+  const MODES = {
+    easy:   { name: "easy",   label: "Easy",   gridSize: 2, studyTimeSeconds: 10, contentPool: GRID2X2, enabled: true },
+    medium: { name: "medium", label: "Medium", gridSize: 3, studyTimeSeconds: 10, contentPool: GRID3X3, enabled: false },
+    hard:   { name: "hard",   label: "Hard",   gridSize: 3, studyTimeSeconds: 7,  contentPool: GRID3X3, enabled: true },
+    insane: { name: "insane", label: "Insane", gridSize: null, studyTimeSeconds: null, contentPool: [], enabled: false }
+  };
+
+  const POSITION_LABELS = {
+    topLeft: "top left", topMiddle: "top middle", topRight: "top right",
+    middleLeft: "middle left", middleMiddle: "middle middle", middleRight: "middle right",
+    bottomLeft: "bottom left", bottomMiddle: "bottom middle", bottomRight: "bottom right"
+  };
+
+  // ===================== SECTION B3: SHAPE RENDERING =====================
+
+  function hex(c) { return c.startsWith("#") ? c : "#" + c; }
+
+  const SHAPES = {
+    rect: (color) => `<div style="width:70%;height:70%;background:${hex(color)};border-radius:4px;"></div>`,
+    ellipse: (color) => `<div style="width:70%;height:70%;background:${hex(color)};border-radius:50%;"></div>`,
+    triangle: (color) => `<div style="width:0;height:0;border-left:40px solid transparent;border-right:40px solid transparent;border-bottom:70px solid ${hex(color)};"></div>`,
+    mathPlus: (color) => `<div style="position:relative;width:60%;height:60%;">
+        <div style="position:absolute;top:40%;left:0;width:100%;height:20%;background:${hex(color)};border-radius:3px;"></div>
+        <div style="position:absolute;left:40%;top:0;height:100%;width:20%;background:${hex(color)};border-radius:3px;"></div>
+      </div>`,
+    star5: (color) => `<svg viewBox="0 0 100 100"><polygon fill="${hex(color)}" points="50,3 61,37 97,37 68,59 79,94 50,73 21,94 32,59 3,37 39,37"/></svg>`,
+    heart: (color) => `<svg viewBox="0 0 32 29"><path fill="${hex(color)}" d="M16 29 C16 29 0 18 0 8 C0 2 4 0 8 0 C12 0 15 3 16 6 C17 3 20 0 24 0 C28 0 32 2 32 8 C32 18 16 29 16 29 Z"/></svg>`,
+    lightningBolt: (color) => `<svg viewBox="0 0 48 80"><polygon fill="${hex(color)}" points="28,0 4,44 20,44 14,80 44,32 26,32 40,0"/></svg>`,
+    sun: (color) => `<svg viewBox="0 0 100 100">
+        <circle cx="50" cy="50" r="22" fill="${hex(color)}"/>
+        <g stroke="${hex(color)}" stroke-width="7" stroke-linecap="round">
+          <line x1="50" y1="2" x2="50" y2="18"/>
+          <line x1="50" y1="82" x2="50" y2="98"/>
+          <line x1="2" y1="50" x2="18" y2="50"/>
+          <line x1="82" y1="50" x2="98" y2="50"/>
+          <line x1="15" y1="15" x2="26" y2="26"/>
+          <line x1="74" y1="74" x2="85" y2="85"/>
+          <line x1="85" y1="15" x2="74" y2="26"/>
+          <line x1="26" y1="74" x2="15" y2="85"/>
+        </g>
+      </svg>`,
+    cloud: (color) => `<svg viewBox="0 0 100 60">
+        <circle cx="28" cy="35" r="20" fill="${hex(color)}"/>
+        <circle cx="50" cy="22" r="22" fill="${hex(color)}"/>
+        <circle cx="72" cy="35" r="18" fill="${hex(color)}"/>
+        <rect x="20" y="35" width="60" height="20" rx="10" fill="${hex(color)}"/>
+      </svg>`,
+    smileyFace: (color) => `<svg viewBox="0 0 100 100">
+        <circle cx="50" cy="50" r="46" fill="${hex(color)}"/>
+        <circle cx="34" cy="40" r="7" fill="#1b1e2b"/>
+        <circle cx="66" cy="40" r="7" fill="#1b1e2b"/>
+        <path d="M28 62 Q50 85 72 62" stroke="#1b1e2b" stroke-width="6" fill="none" stroke-linecap="round"/>
+      </svg>`,
+    cube: (color) => `<svg viewBox="0 0 100 100">
+        <polygon points="30,20 70,20 70,60 30,60" fill="${hex(color)}" opacity="0.9"/>
+        <polygon points="30,20 50,5 90,5 70,20" fill="${hex(color)}" opacity="0.6"/>
+        <polygon points="70,20 90,5 90,45 70,60" fill="${hex(color)}" opacity="0.75"/>
+      </svg>`,
+    mathDivide: (color) => `<svg viewBox="0 0 60 100">
+        <line x1="5" y1="50" x2="55" y2="50" stroke="${hex(color)}" stroke-width="8" stroke-linecap="round"/>
+        <circle cx="30" cy="25" r="7" fill="${hex(color)}"/>
+        <circle cx="30" cy="75" r="7" fill="${hex(color)}"/>
+      </svg>`
+  };
+
+  function renderCellContent(cell) {
+    if (cell.type === "photo") {
+      return `<img src="assets/images/${cell.value}" alt="">`;
+    }
+    if (cell.type === "text") {
+      return `<div class="cell-text">${escapeHtml(cell.value)}</div>`;
+    }
+    if (cell.type === "shape") {
+      const renderer = SHAPES[cell.value.geom];
+      return renderer ? renderer(cell.value.color) : "";
+    }
+    return "";
+  }
+
+  function escapeHtml(str) {
+    const div = document.createElement("div");
+    div.textContent = str;
+    return div.innerHTML;
+  }
+
+  // ===================== SECTION B4: ANSWER CHECKING =====================
+
+  function getAcceptableAnswers(cell) {
+    const m = cell.answer.match(/^(.*?)\(([^)]*)\)\s*$/);
+    let accepted = m ? [m[1].trim(), ...m[2].split("/").map(s => s.trim())] : [cell.answer];
+    if (cell.type === "text" && typeof cell.value === "string") {
+      accepted.push(cell.value);
+    }
+    return accepted.map(s => s.trim().toLowerCase());
+  }
+
+  function isCorrect(cell, input) {
+    return getAcceptableAnswers(cell).includes(input.trim().toLowerCase());
+  }
+
+  // ===================== SECTION B5: STATE MACHINE =====================
+
+  const appState = {
+    screen: "menu",
+    mode: null,
+    round: null,
+    questionKey: null,
+    lastRoundIndexByMode: {},
+    rafHandle: null,
+    blackoutTimeoutHandle: null,
+    advanceTimeoutHandle: null,
+    streak: 0,
+    answered: false
+  };
+
+  const STREAK_VISIBLE_SCREENS = ["screen-study", "screen-question", "screen-feedback"];
+
+  const screens = {};
+  document.querySelectorAll(".screen").forEach(el => { screens[el.id] = el; });
+
+  function showScreen(id) {
+    Object.values(screens).forEach(el => el.classList.remove("active"));
+    screens[id].classList.add("active");
+    appState.screen = id;
+
+    const streakBar = document.getElementById("streak-bar");
+    streakBar.classList.toggle("visible", STREAK_VISIBLE_SCREENS.includes(id));
+  }
+
+  function updateStreakDisplay() {
+    document.getElementById("streak-count").textContent = String(appState.streak);
+  }
+
+  function clearTimers() {
+    if (appState.rafHandle !== null) {
+      cancelAnimationFrame(appState.rafHandle);
+      appState.rafHandle = null;
+    }
+    if (appState.blackoutTimeoutHandle !== null) {
+      clearTimeout(appState.blackoutTimeoutHandle);
+      appState.blackoutTimeoutHandle = null;
+    }
+    if (appState.advanceTimeoutHandle !== null) {
+      clearTimeout(appState.advanceTimeoutHandle);
+      appState.advanceTimeoutHandle = null;
+    }
+  }
+
+  // ---- Menu ----
+
+  function renderMenu() {
+    const container = document.getElementById("menu-buttons");
+    container.innerHTML = "";
+    Object.values(MODES).forEach(mode => {
+      const btn = document.createElement("button");
+      btn.textContent = mode.label;
+      btn.addEventListener("click", () => onSelectMode(mode));
+      container.appendChild(btn);
+    });
+  }
+
+  function onSelectMode(mode) {
+    appState.mode = mode;
+    if (!mode.enabled) {
+      document.getElementById("uc-text").textContent = `${mode.label} mode isn't ready yet — check back soon!`;
+      showScreen("screen-under-construction");
+      return;
+    }
+    appState.streak = 0;
+    updateStreakDisplay();
+    document.getElementById("instructions-mode-badge").textContent = mode.label;
+    document.getElementById("instructions-text").textContent =
+      `You will be given ${mode.studyTimeSeconds} seconds to memorize the objects on a ${mode.gridSize}x${mode.gridSize} grid. ` +
+      `After time's up, you will be asked to recall the item in a specific location.`;
+    showScreen("screen-instructions");
+  }
+
+  // ---- Round selection ----
+
+  function pickRound(mode) {
+    const pool = mode.contentPool;
+    let idx;
+    do {
+      idx = Math.floor(Math.random() * pool.length);
+    } while (pool.length > 1 && idx === appState.lastRoundIndexByMode[mode.name]);
+    appState.lastRoundIndexByMode[mode.name] = idx;
+    return pool[idx];
+  }
+
+  function pickQuestionKey(round) {
+    const keys = Object.keys(round.cells);
+    return keys[Math.floor(Math.random() * keys.length)];
+  }
+
+  // ---- Study screen ----
+
+  function startRound(mode) {
+    clearTimers();
+    appState.round = pickRound(mode);
+    appState.questionKey = pickQuestionKey(appState.round);
+
+    document.getElementById("study-mode-badge").textContent = mode.label;
+    const grid = document.getElementById("study-grid");
+    grid.dataset.size = String(mode.gridSize);
+    grid.innerHTML = "";
+
+    Object.keys(appState.round.cells).forEach(key => {
+      const cell = appState.round.cells[key];
+      const cellEl = document.createElement("div");
+      cellEl.className = "cell";
+      cellEl.innerHTML = renderCellContent(cell);
+      grid.appendChild(cellEl);
+    });
+
+    showScreen("screen-study");
+    runStudyTimer(mode.studyTimeSeconds);
+  }
+
+  function runStudyTimer(seconds) {
+    const durationMs = seconds * 1000;
+    const start = performance.now();
+    const fill = document.getElementById("progress-fill");
+    fill.style.width = "100%";
+
+    function tick(now) {
+      const elapsed = now - start;
+      const remainingPct = Math.max(0, 100 - (elapsed / durationMs) * 100);
+      fill.style.width = remainingPct + "%";
+
+      if (elapsed >= durationMs) {
+        appState.rafHandle = null;
+        enterBlackout();
+      } else {
+        appState.rafHandle = requestAnimationFrame(tick);
+      }
+    }
+
+    appState.rafHandle = requestAnimationFrame(tick);
+  }
+
+  // ---- Blackout ----
+
+  function enterBlackout() {
+    showScreen("screen-blackout");
+    appState.blackoutTimeoutHandle = setTimeout(() => {
+      appState.blackoutTimeoutHandle = null;
+      enterQuestion();
+    }, 2000);
+  }
+
+  // ---- Question ----
+
+  function enterQuestion() {
+    document.getElementById("question-mode-badge").textContent = appState.mode.label;
+    const label = POSITION_LABELS[appState.questionKey] || appState.questionKey;
+    document.getElementById("question-text").textContent = `What was in the ${label} position?`;
+    const input = document.getElementById("answer-input");
+    input.value = "";
+    appState.answered = false;
+    showScreen("screen-question");
+    input.focus();
+  }
+
+  function submitAnswer() {
+    if (appState.answered) return;
+    appState.answered = true;
+
+    const input = document.getElementById("answer-input");
+    const cell = appState.round.cells[appState.questionKey];
+    const correct = isCorrect(cell, input.value);
+
+    const resultEl = document.getElementById("feedback-result");
+    const detailEl = document.getElementById("feedback-detail");
+    const buttonsEl = document.getElementById("feedback-buttons");
+
+    if (correct) {
+      appState.streak += 1;
+      updateStreakDisplay();
+      resultEl.textContent = "Correct!";
+      resultEl.className = "feedback-result correct";
+      detailEl.textContent = "";
+      buttonsEl.style.display = "none";
+      showScreen("screen-feedback");
+      appState.advanceTimeoutHandle = setTimeout(() => {
+        appState.advanceTimeoutHandle = null;
+        startRound(appState.mode);
+      }, 1200);
+    } else {
+      appState.streak = 0;
+      updateStreakDisplay();
+      resultEl.textContent = "Incorrect";
+      resultEl.className = "feedback-result incorrect";
+      detailEl.textContent = `The correct answer was "${cell.answer.replace(/\(.*\)/, "").trim()}".`;
+      buttonsEl.style.display = "flex";
+      showScreen("screen-feedback");
+    }
+  }
+
+  // ===================== SECTION B7: WIRING =====================
+
+  function init() {
+    renderMenu();
+
+    document.getElementById("btn-start-round").addEventListener("click", () => startRound(appState.mode));
+    document.getElementById("btn-instructions-back").addEventListener("click", () => showScreen("screen-menu"));
+
+    document.getElementById("btn-submit-answer").addEventListener("click", submitAnswer);
+    document.getElementById("answer-input").addEventListener("keydown", (e) => {
+      if (e.key === "Enter") submitAnswer();
+    });
+
+    document.getElementById("btn-play-again").addEventListener("click", () => startRound(appState.mode));
+    document.getElementById("btn-feedback-menu").addEventListener("click", () => {
+      clearTimers();
+      showScreen("screen-menu");
+    });
+
+    document.getElementById("btn-uc-back").addEventListener("click", () => showScreen("screen-menu"));
+
+    showScreen("screen-menu");
+  }
+
+  init();
+})();
+</script>
 </body>
 </html>

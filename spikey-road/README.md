@@ -14,9 +14,9 @@ Reach the end of the road (100%) to win. Your best progress is saved in your bro
 ## Controls
 | Action | Keyboard | Touch |
 |---|---|---|
-| Change lane | W / S or Up / Down | tap the left half of the road above / below you |
-| Jump | Space, X or Right | "SPACE / JUMP" bar under the road |
-| Shoot | F or Z | tap the right half of the road |
+| Change lane | W / S or Up / Down | tap the road above / below you |
+| Jump | Space, X or Right | "jump" bar under the road |
+| Shoot | F or Z | "shoot" bar down the right side of the road |
 | Pause | P | |
 
 Touch controls appear automatically on phones and tablets. A hint is shown on the first play.

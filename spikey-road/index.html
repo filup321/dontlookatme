@@ -14,12 +14,11 @@
       <canvas id="road-canvas" width="160" height="144"></canvas>
 
       <div id="touch-hint" class="hidden" aria-hidden="true">
-        <div class="hint-half hint-left">
-          <span>&#9650;<br />tap above you<br />to move up</span>
-          <span>tap below you<br />to move down<br />&#9660;</span>
-        </div>
-        <div class="hint-half hint-right"><span>tap to<br />shoot</span></div>
+        <span>&#9650;<br />tap above you<br />to move up</span>
+        <span>tap below you<br />to move down<br />&#9660;</span>
       </div>
+
+      <button id="shoot-bar" type="button" aria-label="Shoot">shoot</button>
 
       <div id="overlay" class="overlay">
         <div class="box">
@@ -33,7 +32,7 @@
       </div>
     </div>
 
-    <button id="jump-bar" class="pixel-btn" type="button">SPACE / JUMP</button>
+    <button id="jump-bar" class="pixel-btn" type="button">jump</button>
   </div>
 
   <script src="game.js"></script>

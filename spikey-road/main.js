@@ -113,12 +113,13 @@
   });
 
   // Touch controls (touch devices only; desktop uses the keyboard).
-  //   left half of the road  -> tap above / below the player to change lane
-  //   right half of the road -> shoot
-  //   jump bar under the road -> jump
+  //   tap the road above / below the player -> change lane
+  //   shoot bar down the right side           -> shoot
+  //   jump bar under the road                 -> jump
   const root = document.getElementById('game-root');
   const hint = document.getElementById('touch-hint');
   const jumpBar = document.getElementById('jump-bar');
+  const shootBar = document.getElementById('shoot-bar');
   const HINT_KEY = 'spikey-road-hint-seen';
   const TOUCH = window.matchMedia('(pointer: coarse)').matches;
 
@@ -146,17 +147,22 @@
   if (TOUCH) {
     document.body.classList.add('touch');
 
+    // Anywhere on the road except the shoot bar: tap above / below the player to move.
     root.addEventListener('pointerdown', (e) => {
+      if (e.target.closest('#shoot-bar')) return;
       if (state !== 'playing') return;
       e.preventDefault();
       dismissHint();
-      if (e.clientX >= root.getBoundingClientRect().left + root.clientWidth / 2) {
-        GAME.shoot();
-      } else {
-        const lane = tappedLane(e.clientY);
-        const current = GAME.getLane();
-        if (lane !== current) GAME.setLane(lane < current ? -1 : 1);
-      }
+      const lane = tappedLane(e.clientY);
+      const current = GAME.getLane();
+      if (lane !== current) GAME.setLane(lane < current ? -1 : 1);
+    });
+
+    shootBar.addEventListener('pointerdown', (e) => {
+      e.preventDefault();
+      if (state !== 'playing') return;
+      dismissHint();
+      GAME.shoot();
     });
 
     jumpBar.addEventListener('pointerdown', (e) => {

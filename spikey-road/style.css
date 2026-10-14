@@ -90,8 +90,35 @@ body {
 .box .keys { font-size: 0.85em; opacity: 0.8; margin-top: 8px; }
 .box .best { font-weight: bold; min-height: 1.4em; }
 
-/* Touch controls: tap zones on the road plus a jump bar below it. Hidden on desktop. */
-#jump-bar { display: none; }
+/* Touch controls: tap the road to move, a shoot bar down the right edge, a jump bar below. Hidden on desktop. */
+#jump-bar, #shoot-bar { display: none; }
+
+body.touch #shoot-bar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: 16%;
+  padding: 0;
+  border: 0;
+  border-left: 3px solid #1a1a1a;
+  background: rgba(193, 80, 46, 0.85);
+  color: #f8f4e3;
+  font-family: inherit;
+  font-weight: bold;
+  font-size: clamp(14px, 4.5vw, 22px);
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  writing-mode: vertical-rl;
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+body.touch #shoot-bar:active { background: rgba(150, 60, 34, 0.95); }
 
 body.touch #game-root { touch-action: none; }
 
@@ -106,35 +133,24 @@ body.touch #jump-bar {
 
 #touch-hint {
   position: absolute;
-  inset: 0;
+  inset: 0 16% 0 0;
   display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  padding: 8% 0;
+  background: rgba(20, 16, 10, 0.45);
   pointer-events: none;
   animation: hint-pulse 1.6s ease-in-out infinite;
 }
 
-.hint-half {
-  flex: 1;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+#touch-hint > span {
+  display: block;
   color: #f8f4e3;
   font-weight: bold;
   text-align: center;
   font-size: clamp(10px, 2.8vw, 14px);
   line-height: 1.3;
   text-shadow: 1px 1px 0 #1a1a1a;
-}
-
-.hint-left {
-  flex-direction: column;
-  justify-content: space-between;
-  padding: 8% 0;
-  background: rgba(20, 16, 10, 0.45);
-}
-
-.hint-right {
-  background: rgba(193, 80, 46, 0.4);
-  border-left: 2px dashed #f8f4e3;
 }
 
 @keyframes hint-pulse {

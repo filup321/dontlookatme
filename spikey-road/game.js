@@ -14,7 +14,7 @@ function rectsAt(ctx, x, y, rects) {
 
 const ROAD_W = 120;
 const ROAD_H = 176;
-const ROAD_LANES = [20, 60, 100]; // lane centres (x)
+const ROAD_LANES = [34, 60, 86]; // lane centres (x), all on the dirt track
 const ROAD_PLAYER_Y = 148;
 const ROAD_WIN_DISTANCE = 2600;
 const ROAD_SPAWN_MIN = 650;
@@ -66,6 +66,7 @@ const RoadGame = (() => {
     loadSprite('snake', 'assets/rattlesnake.png');
     loadSprite('snakeDead', 'assets/rattlesnake-dead.png');
     loadSprite('rocks', 'assets/rocks-row.png');
+    loadSprite('road', 'assets/road-bg.png');
     window.addEventListener('keydown', handleKeydown);
   }
 
@@ -237,24 +238,37 @@ const RoadGame = (() => {
     ctx.restore();
   }
 
+  // The desert backdrop is one tall picture. It scrolls down and repeats; every
+  // other copy is flipped upside down so the join is seamless.
+  let roadFlipped = null;
+
+  function flippedRoad(img) {
+    if (!roadFlipped) {
+      roadFlipped = document.createElement('canvas');
+      roadFlipped.width = img.naturalWidth;
+      roadFlipped.height = img.naturalHeight;
+      const g = roadFlipped.getContext('2d');
+      g.translate(0, img.naturalHeight);
+      g.scale(1, -1);
+      g.drawImage(img, 0, 0);
+    }
+    return roadFlipped;
+  }
+
   function drawRoad() {
-    const scrollA = distance % 16;
-    for (let i = -1; i < 12; i += 1) {
-      const y = i * 16 + scrollA;
-      ctx.fillStyle = '#cdae6c';
-      ctx.fillRect(0, y, ROAD_W, 16);
-      ctx.fillStyle = '#c2a05f';
-      ctx.fillRect(0, y, ROAD_W, 8);
+    const img = sprite('road');
+    if (!img) {
+      ctx.fillStyle = '#c98a4b';
+      ctx.fillRect(0, 0, ROAD_W, ROAD_H);
+      return;
     }
-    const scrollB = distance % 20;
-    for (let laneIdx = 0; laneIdx < ROAD_LANES.length - 1; laneIdx += 1) {
-      const dividerX = (ROAD_LANES[laneIdx] + ROAD_LANES[laneIdx + 1]) / 2;
-      for (let i = -1; i < 10; i += 1) {
-        const y = i * 20 + scrollB;
-        ctx.fillStyle = '#8a6a4a';
-        ctx.fillRect(dividerX, y, 2, 10);
-      }
-    }
+    const tileH = img.naturalHeight / ROAD_SCALE;
+    const n = Math.floor(distance / tileH);
+    const pos = distance - n * tileH;
+    // tile n sits at [pos, pos + tileH]; the next tile (n + 1) is just above it
+    const pick = (i) => (i % 2 === 0 ? img : flippedRoad(img));
+    ctx.drawImage(pick(n), 0, pos, ROAD_W, tileH);
+    ctx.drawImage(pick(n + 1), 0, pos - tileH, ROAD_W, tileH);
   }
 
   function drawCactus(o) {

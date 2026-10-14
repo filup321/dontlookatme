@@ -52,7 +52,7 @@
   h2 { font-size: 1.6rem; margin: 0; }
   p { color: var(--muted); line-height: 1.5; margin: 0; }
 
-  .menu-buttons, .feedback-buttons {
+  .menu-buttons, .feedback-buttons, .uc-buttons {
     display: flex;
     flex-direction: column;
     gap: 12px;
@@ -88,65 +88,6 @@
     cursor: not-allowed;
   }
 
-  /* Leaderboard */
-  .leaderboard {
-    width: 100%;
-    max-width: 320px;
-    padding: 14px 18px;
-    border-radius: 12px;
-    background: var(--panel);
-    border: 1px solid rgba(255,255,255,0.08);
-    text-align: left;
-  }
-
-  .leaderboard h3 {
-    margin: 0 0 10px;
-    font-size: 0.85rem;
-    letter-spacing: 0.06em;
-    text-transform: uppercase;
-    color: var(--muted);
-    text-align: center;
-  }
-
-  .leaderboard ul {
-    list-style: none;
-    margin: 0;
-    padding: 0;
-    display: flex;
-    flex-direction: column;
-    gap: 6px;
-  }
-
-  .leaderboard li {
-    display: flex;
-    justify-content: space-between;
-    gap: 12px;
-    font-size: 0.95rem;
-  }
-
-  .lb-mode { font-weight: 700; }
-
-  .lb-entry {
-    text-align: right;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  }
-
-  .lb-entry.empty { color: var(--muted); }
-
-  .lb-foot {
-    margin-top: 10px;
-    font-size: 0.8rem;
-    color: var(--muted);
-    text-align: center;
-  }
-
-  .lb-foot:empty { display: none; }
-
-  .lb-foot a { color: var(--accent); cursor: pointer; text-decoration: none; }
-  .lb-foot a:hover { text-decoration: underline; }
-
   /* Progress bar */
   .progress-track {
     width: 100%;
@@ -165,19 +106,17 @@
     border-radius: 999px;
   }
 
-  /* Grid: --rows / --cols are set per mode from JS */
+  /* Grid */
   .grid {
-    --rows: 2;
-    --cols: 2;
-    --maxw: 520px;
     display: grid;
     gap: 10px;
-    width: min(100%, var(--maxw), calc((100vh - 190px) * var(--cols) / var(--rows)));
-    grid-template-columns: repeat(var(--cols), 1fr);
-    grid-template-rows: repeat(var(--rows), 1fr);
+    width: 100%;
+    max-width: 520px;
+    aspect-ratio: 1 / 1;
   }
 
-  .grid.dense { --maxw: 640px; gap: 6px; }
+  .grid[data-size="2"] { grid-template-columns: repeat(2, 1fr); grid-template-rows: repeat(2, 1fr); }
+  .grid[data-size="3"] { grid-template-columns: repeat(3, 1fr); grid-template-rows: repeat(3, 1fr); }
 
   .cell {
     background: var(--cell-bg);
@@ -187,11 +126,8 @@
     justify-content: center;
     overflow: hidden;
     position: relative;
-    container-type: size;
     box-shadow: 0 2px 10px rgba(0,0,0,0.25);
   }
-
-  .dense .cell { border-radius: 8px; box-shadow: 0 1px 4px rgba(0,0,0,0.25); }
 
   .cell img {
     width: 100%;
@@ -200,11 +136,8 @@
     padding: 8px;
   }
 
-  .dense .cell img { padding: 3px; }
-
   .cell .cell-text {
-    font-size: min(24cqmin, 2.4rem);
-    line-height: 1.1;
+    font-size: clamp(1.2rem, 6vw, 2.2rem);
     font-weight: 700;
     color: #1b1e2b;
     padding: 6px;
@@ -216,13 +149,27 @@
     height: 70%;
   }
 
+  /* Blackout */
+  #screen-blackout {
+    background: black;
+    position: fixed;
+    inset: 0;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    z-index: 50;
+    max-width: none;
+  }
+
+  #screen-blackout.active { display: flex; }
+
   /* Question */
   .question-text {
-    font-size: 1.8rem;
+    font-size: 1.4rem;
     font-weight: 600;
   }
 
-  #answer-input, #name-input {
+  #answer-input {
     width: 100%;
     max-width: 320px;
     padding: 14px 16px;
@@ -234,17 +181,9 @@
     text-align: center;
   }
 
-  #answer-input:focus, #name-input:focus {
+  #answer-input:focus {
     outline: none;
     border-color: var(--accent);
-  }
-
-  .name-buttons {
-    display: flex;
-    flex-direction: column;
-    gap: 12px;
-    width: 100%;
-    max-width: 320px;
   }
 
   .feedback-result {
@@ -285,6 +224,30 @@
   .streak-bar.visible { display: block; }
 
   #streak-count { color: var(--accent); }
+
+  .back-link { color: var(--muted); text-decoration: none; font-weight: 600; }
+  .back-link:hover { color: var(--text); }
+
+  .game-widget {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    width: 100%;
+    max-width: 320px;
+    margin-top: 8px;
+    padding: 12px 16px;
+    border-radius: 10px;
+    border: 2px solid var(--panel);
+    background: var(--panel);
+    color: var(--text);
+    text-decoration: none;
+    text-align: center;
+  }
+
+  .game-widget:hover { border-color: var(--accent); }
+  .game-widget-label { font-size: 0.75rem; letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted); }
+  .game-widget-title { font-size: 1.1rem; font-weight: 700; }
+  .game-widget-sub { font-size: 0.85rem; color: var(--muted); }
 </style>
 </head>
 <body>
@@ -294,22 +257,11 @@
     <h1>Memory Game</h1>
     <p>Pick a difficulty to begin.</p>
     <div class="menu-buttons" id="menu-buttons"></div>
-    <div class="leaderboard" id="leaderboard">
-      <h3>Top scores</h3>
-      <ul id="leaderboard-list"></ul>
-      <div class="lb-foot" id="leaderboard-note"></div>
-      <div class="lb-foot" id="leaderboard-player"></div>
-    </div>
-  </section>
-
-  <section class="screen" id="screen-name">
-    <h2>What's your name?</h2>
-    <p>Your best streaks show up on the leaderboard.</p>
-    <input type="text" id="name-input" placeholder="Your name" maxlength="20" autocomplete="off">
-    <div class="name-buttons">
-      <button id="btn-save-name">Continue</button>
-      <button class="secondary" id="btn-name-back">Back</button>
-    </div>
+    <a class="game-widget" href="spikey-road/index.html">
+      <span class="game-widget-label">More games</span>
+      <span class="game-widget-title">Road to Veracruz</span>
+      <span class="game-widget-sub">A spikey desert adventure</span>
+    </a>
   </section>
 
   <section class="screen" id="screen-instructions">
@@ -326,7 +278,7 @@
     <div class="progress-track">
       <div class="progress-fill" id="progress-fill"></div>
     </div>
-    <div class="grid" id="study-grid"></div>
+    <div class="grid" id="study-grid" data-size="2"></div>
   </section>
 
   <section class="screen" id="screen-question">
@@ -345,81 +297,62 @@
     </div>
   </section>
 
+  <section class="screen" id="screen-under-construction">
+    <h2>🚧 Under Construction 🚧</h2>
+    <p id="uc-text">This mode isn't ready yet — check back soon!</p>
+    <div class="uc-buttons">
+      <button id="btn-uc-back">Back to Menu</button>
+    </div>
+  </section>
+
 </div>
 
 <div class="streak-bar" id="streak-bar">Streak: <span id="streak-count">0</span></div>
+
+<div class="screen" id="screen-blackout"></div>
 
 <script>
 (function () {
   "use strict";
 
   // ===================== SECTION B1: CONTENT DATA =====================
-  // Generated from "Memory Game- Working.pptx" + "Memory Game Key.csv" by tools/build_data.py.
-  // Don't edit by hand; re-run the script after changing the deck or the key.
-  // Each cell: r/c = zero-based row/column, type = photo | text | shape, answers = accepted answers (first is shown).
 
-  // BEGIN GENERATED DATA
-  const ROUNDS = {
-    easy: [
-      {"slide":1,"cells":[{"r":0,"c":0,"type":"photo","answers":["pig"],"value":"pig.png"},{"r":0,"c":1,"type":"shape","answers":["rectangle"],"value":{"geom":"rect","color":"FFFF00"}},{"r":1,"c":0,"type":"text","answers":["oink"],"value":"oink"},{"r":1,"c":1,"type":"text","answers":["9"],"value":"9"}]},
-      {"slide":2,"cells":[{"r":0,"c":0,"type":"text","answers":["3"],"value":"3"},{"r":0,"c":1,"type":"photo","answers":["gorilla"],"value":"gorilla.png"},{"r":1,"c":0,"type":"shape","answers":["circle"],"value":{"geom":"ellipse","color":"4285F4"}},{"r":1,"c":1,"type":"text","answers":["moo"],"value":"moo"}]},
-      {"slide":3,"cells":[{"r":0,"c":0,"type":"text","answers":["6"],"value":"6"},{"r":0,"c":1,"type":"text","answers":["yes"],"value":"yes"},{"r":1,"c":0,"type":"photo","answers":["panda"],"value":"panda.png"},{"r":1,"c":1,"type":"shape","answers":["triangle"],"value":{"geom":"triangle","color":"FF0000"}}]},
-      {"slide":4,"cells":[{"r":0,"c":0,"type":"text","answers":["two"],"value":"2"},{"r":0,"c":1,"type":"shape","answers":["purple"],"value":{"geom":"heart","color":"9900FF"}},{"r":1,"c":0,"type":"photo","answers":["rhino"],"value":"rhino.png"},{"r":1,"c":1,"type":"text","answers":["eye"],"value":"eye"}]},
-      {"slide":5,"cells":[{"r":0,"c":0,"type":"photo","answers":["elephant"],"value":"elephant.png"},{"r":0,"c":1,"type":"shape","answers":["lightning bolt"],"value":{"geom":"lightningBolt","color":"FF0000"}},{"r":1,"c":0,"type":"text","answers":["potter"],"value":"potter"},{"r":1,"c":1,"type":"text","answers":["two"],"value":"2"}]},
-      {"slide":6,"cells":[{"r":0,"c":0,"type":"text","answers":["moon"],"value":"moon"},{"r":0,"c":1,"type":"text","answers":["8"],"value":"8"},{"r":1,"c":0,"type":"shape","answers":["sun"],"value":{"geom":"sun","color":"FF9900"}},{"r":1,"c":1,"type":"photo","answers":["zebra"],"value":"zebra.png"}]},
-      {"slide":7,"cells":[{"r":0,"c":0,"type":"text","answers":["5"],"value":"5"},{"r":0,"c":1,"type":"photo","answers":["horse"],"value":"horse.png"},{"r":1,"c":0,"type":"text","answers":["dog"],"value":"dog"},{"r":1,"c":1,"type":"shape","answers":["cloud"],"value":{"geom":"cloud","color":"EEEEEE"}}]},
-      {"slide":8,"cells":[{"r":0,"c":0,"type":"shape","answers":["smiley face"],"value":{"geom":"smileyFace","color":"FFFF00"}},{"r":0,"c":1,"type":"text","answers":["7"],"value":"7"},{"r":1,"c":0,"type":"photo","answers":["cow"],"value":"cow.png"},{"r":1,"c":1,"type":"text","answers":["zero"],"value":"zero"}]}
-    ],
-    medium: [
-      {"slide":1,"cells":[{"r":0,"c":0,"type":"photo","answers":["cupcake"],"value":"cupcake.png"},{"r":0,"c":1,"type":"shape","answers":["smiley face"],"value":{"geom":"smileyFace","color":"FFFF00"}},{"r":1,"c":0,"type":"text","answers":["20"],"value":"20"},{"r":1,"c":1,"type":"photo","answers":["rooster"],"value":"rooster.png"},{"r":2,"c":0,"type":"photo","answers":["eggplant"],"value":"eggplant.png"},{"r":2,"c":1,"type":"text","answers":["no"],"value":"no"}]},
-      {"slide":2,"cells":[{"r":0,"c":0,"type":"shape","answers":["heart"],"value":{"geom":"heart","color":"9900FF"}},{"r":0,"c":1,"type":"text","answers":["30"],"value":"30"},{"r":1,"c":0,"type":"photo","answers":["corn"],"value":"corn.png"},{"r":1,"c":1,"type":"photo","answers":["fried egg"],"value":"fried-egg.png"},{"r":2,"c":0,"type":"photo","answers":["cow"],"value":"cow.png"},{"r":2,"c":1,"type":"text","answers":["hot"],"value":"hot"}]},
-      {"slide":3,"cells":[{"r":0,"c":0,"type":"photo","answers":["carrot"],"value":"carrot.png"},{"r":0,"c":1,"type":"text","answers":["bark"],"value":"bark"},{"r":1,"c":0,"type":"photo","answers":["ice cream"],"value":"ice-cream.png"},{"r":1,"c":1,"type":"shape","answers":["cube"],"value":{"geom":"cube","color":"38761D"}},{"r":2,"c":0,"type":"text","answers":["40"],"value":"40"},{"r":2,"c":1,"type":"photo","answers":["dog"],"value":"dog.png"}]},
-      {"slide":4,"cells":[{"r":0,"c":0,"type":"photo","answers":["cat"],"value":"cat.png"},{"r":0,"c":1,"type":"text","answers":["ray"],"value":"ray"},{"r":1,"c":0,"type":"shape","answers":["sun"],"value":{"geom":"sun","color":"FF9900"}},{"r":1,"c":1,"type":"text","answers":["51"],"value":"51"},{"r":2,"c":0,"type":"shape","answers":["circle"],"value":{"geom":"ellipse","color":"FF0000"}},{"r":2,"c":1,"type":"photo","answers":["pancake"],"value":"pancake.png"}]},
-      {"slide":5,"cells":[{"r":0,"c":0,"type":"photo","answers":["donut"],"value":"donut.png"},{"r":0,"c":1,"type":"photo","answers":["kiwi"],"value":"kiwi.png"},{"r":1,"c":0,"type":"shape","answers":["circle"],"value":{"geom":"ellipse","color":"4285F4"}},{"r":1,"c":1,"type":"photo","answers":["elephant"],"value":"elephant.png"},{"r":2,"c":0,"type":"text","answers":["62"],"value":"62"},{"r":2,"c":1,"type":"text","answers":["TV"],"value":"TV"}]},
-      {"slide":6,"cells":[{"r":0,"c":0,"type":"photo","answers":["parrot"],"value":"parrot.png"},{"r":0,"c":1,"type":"text","answers":["62"],"value":"62"},{"r":1,"c":0,"type":"photo","answers":["orange"],"value":"orange.png"},{"r":1,"c":1,"type":"photo","answers":["cake"],"value":"cake.png"},{"r":2,"c":0,"type":"shape","answers":["triangle"],"value":{"geom":"triangle","color":"FF0000"}},{"r":2,"c":1,"type":"text","answers":["eww"],"value":"eww"}]},
-      {"slide":7,"cells":[{"r":0,"c":0,"type":"photo","answers":["horse"],"value":"horse.png"},{"r":0,"c":1,"type":"photo","answers":["cookie"],"value":"cookie.png"},{"r":1,"c":0,"type":"photo","answers":["tomato"],"value":"tomato.png"},{"r":1,"c":1,"type":"text","answers":["51"],"value":"51"},{"r":2,"c":0,"type":"text","answers":["fruit"],"value":"fruit"},{"r":2,"c":1,"type":"shape","answers":["rectangle"],"value":{"geom":"rect","color":"FFFF00"}}]},
-      {"slide":8,"cells":[{"r":0,"c":0,"type":"text","answers":["91"],"value":"91"},{"r":0,"c":1,"type":"photo","answers":["pretzel"],"value":"pretzel.png"},{"r":1,"c":0,"type":"text","answers":["grass"],"value":"grass"},{"r":1,"c":1,"type":"photo","answers":["zebra"],"value":"zebra.png"},{"r":2,"c":0,"type":"shape","answers":["lightning bolt"],"value":{"geom":"lightningBolt","color":"FF0000"}},{"r":2,"c":1,"type":"photo","answers":["apple"],"value":"apple-1.png"}]},
-      {"slide":9,"cells":[{"r":0,"c":0,"type":"photo","answers":["orange"],"value":"orange.png"},{"r":0,"c":1,"type":"text","answers":["yes"],"value":"yes"},{"r":1,"c":0,"type":"text","answers":["96"],"value":"96"},{"r":1,"c":1,"type":"photo","answers":["waffle"],"value":"waffle.png"},{"r":2,"c":0,"type":"photo","answers":["giraffe"],"value":"giraffe.png"},{"r":2,"c":1,"type":"shape","answers":["cloud"],"value":{"geom":"cloud","color":"EEEEEE"}}]},
-      {"slide":10,"cells":[{"r":0,"c":0,"type":"shape","answers":["star"],"value":{"geom":"star5","color":"0000FF"}},{"r":0,"c":1,"type":"photo","answers":["taco"],"value":"taco.png"},{"r":1,"c":0,"type":"photo","answers":["watermelon"],"value":"watermelon.png"},{"r":1,"c":1,"type":"text","answers":["80"],"value":"80"},{"r":2,"c":0,"type":"photo","answers":["pig"],"value":"pig.png"},{"r":2,"c":1,"type":"text","answers":["cow"],"value":"cow"}]},
-      {"slide":11,"cells":[{"r":0,"c":0,"type":"photo","answers":["strawberry"],"value":"strawberry.png"},{"r":0,"c":1,"type":"shape","answers":["cube"],"value":{"geom":"cube","color":"38761D"}},{"r":1,"c":0,"type":"text","answers":["19"],"value":"19"},{"r":1,"c":1,"type":"text","answers":["blue"],"value":"blue"},{"r":2,"c":0,"type":"photo","answers":["french fries"],"value":"french-fries.png"},{"r":2,"c":1,"type":"photo","answers":["panda"],"value":"panda.png"}]},
-      {"slide":12,"cells":[{"r":0,"c":0,"type":"text","answers":["13"],"value":"13"},{"r":0,"c":1,"type":"photo","answers":["rhino"],"value":"rhino.png"},{"r":1,"c":0,"type":"shape","answers":["circle"],"value":{"geom":"ellipse","color":"4285F4"}},{"r":1,"c":1,"type":"photo","answers":["hot dog"],"value":"hot-dog.png"},{"r":2,"c":0,"type":"photo","answers":["pineapple"],"value":"pineapple.png"},{"r":2,"c":1,"type":"text","answers":["red"],"value":"red"}]},
-      {"slide":13,"cells":[{"r":0,"c":0,"type":"photo","answers":["hamburger"],"value":"hamburger.png"},{"r":0,"c":1,"type":"text","answers":["ham"],"value":"ham"},{"r":1,"c":0,"type":"photo","answers":["gorilla"],"value":"gorilla.png"},{"r":1,"c":1,"type":"photo","answers":["grape"],"value":"grape.png"},{"r":2,"c":0,"type":"text","answers":["48"],"value":"48"},{"r":2,"c":1,"type":"shape","answers":["smiley face"],"value":{"geom":"smileyFace","color":"FFFF00"}}]}
-    ],
-    hard: [
-      {"slide":1,"cells":[{"r":0,"c":0,"type":"photo","answers":["Rooster"],"value":"rooster.png"},{"r":0,"c":1,"type":"shape","answers":["Cube"],"value":{"geom":"cube","color":"38761D"}},{"r":0,"c":2,"type":"shape","answers":["Heart"],"value":{"geom":"heart","color":"9900FF"}},{"r":1,"c":0,"type":"text","answers":["one","1"],"value":"1"},{"r":1,"c":1,"type":"photo","answers":["gorilla"],"value":"gorilla.png"},{"r":1,"c":2,"type":"text","answers":["red"],"value":"red"},{"r":2,"c":0,"type":"text","answers":["percent","division","divide by sign"],"value":"%"},{"r":2,"c":1,"type":"shape","answers":["circle"],"value":{"geom":"ellipse","color":"4285F4"}},{"r":2,"c":2,"type":"text","answers":["double zero","00"],"value":"00"}]},
-      {"slide":2,"cells":[{"r":0,"c":0,"type":"photo","answers":["pig"],"value":"pig.png"},{"r":0,"c":1,"type":"text","answers":["40","forty"],"value":"40"},{"r":0,"c":2,"type":"text","answers":["two","2"],"value":"2"},{"r":1,"c":0,"type":"shape","answers":["rectangle"],"value":{"geom":"rect","color":"FFFF00"}},{"r":1,"c":1,"type":"text","answers":["blue"],"value":"blue"},{"r":1,"c":2,"type":"photo","answers":["california"],"value":"california.png"},{"r":2,"c":0,"type":"text","answers":["dollar sign"],"value":"$"},{"r":2,"c":1,"type":"shape","answers":["lightning bolt"],"value":{"geom":"lightningBolt","color":"FF0000"}},{"r":2,"c":2,"type":"text","answers":["question mark"],"value":"?"}]},
-      {"slide":3,"cells":[{"r":0,"c":0,"type":"text","answers":["23","twenty-three"],"value":"23"},{"r":0,"c":1,"type":"text","answers":["question mark"],"value":"?"},{"r":0,"c":2,"type":"text","answers":["exclamation point"],"value":"!"},{"r":1,"c":0,"type":"photo","answers":["giraffe"],"value":"giraffe.png"},{"r":1,"c":1,"type":"photo","answers":["hawaii"],"value":"hawaii.png"},{"r":1,"c":2,"type":"photo","answers":["cow"],"value":"cow.png"},{"r":2,"c":0,"type":"shape","answers":["triangle"],"value":{"geom":"triangle","color":"FF0000"}},{"r":2,"c":1,"type":"photo","answers":["apple"],"value":"apple-2.png"},{"r":2,"c":2,"type":"text","answers":["32","thirty-two"],"value":"32"}]},
-      {"slide":4,"cells":[{"r":0,"c":0,"type":"photo","answers":["panda"],"value":"panda.png"},{"r":0,"c":1,"type":"photo","answers":["dog"],"value":"dog.png"},{"r":0,"c":2,"type":"text","answers":["121"],"value":"121"},{"r":1,"c":0,"type":"shape","answers":["triangle"],"value":{"geom":"triangle","color":"FF0000"}},{"r":1,"c":1,"type":"text","answers":["12"],"value":"12"},{"r":1,"c":2,"type":"text","answers":["number sign"],"value":"#"},{"r":2,"c":0,"type":"photo","answers":["hamburger"],"value":"hamburger.png"},{"r":2,"c":1,"type":"shape","answers":["smiley face"],"value":{"geom":"smileyFace","color":"FFFF00"}},{"r":2,"c":2,"type":"photo","answers":["texas"],"value":"texas.png"}]},
-      {"slide":5,"cells":[{"r":0,"c":0,"type":"photo","answers":["florida"],"value":"florida.png"},{"r":0,"c":1,"type":"photo","answers":["hot dog"],"value":"hot-dog.png"},{"r":0,"c":2,"type":"shape","answers":["cube"],"value":{"geom":"cube","color":"38761D"}},{"r":1,"c":0,"type":"text","answers":["@"],"value":"@"},{"r":1,"c":1,"type":"shape","answers":["plus","addition"],"value":{"geom":"mathPlus","color":"000000"}},{"r":1,"c":2,"type":"text","answers":["70"],"value":"70"},{"r":2,"c":0,"type":"photo","answers":["zebra"],"value":"zebra.png"},{"r":2,"c":1,"type":"photo","answers":["cat"],"value":"cat.png"},{"r":2,"c":2,"type":"text","answers":["88"],"value":"88"}]},
-      {"slide":6,"cells":[{"r":0,"c":0,"type":"text","answers":["ouch"],"value":"ouch"},{"r":0,"c":1,"type":"text","answers":["49"],"value":"49"},{"r":0,"c":2,"type":"photo","answers":["horse"],"value":"horse.png"},{"r":1,"c":0,"type":"shape","answers":["division"],"value":{"geom":"mathDivide","color":"000000"}},{"r":1,"c":1,"type":"shape","answers":["circle"],"value":{"geom":"ellipse","color":"4285F4"}},{"r":1,"c":2,"type":"shape","answers":["sun"],"value":{"geom":"sun","color":"FF9900"}},{"r":2,"c":0,"type":"photo","answers":["alaska"],"value":"alaska.png"},{"r":2,"c":1,"type":"text","answers":["222"],"value":"222"},{"r":2,"c":2,"type":"photo","answers":["french fries"],"value":"french-fries.png"}]},
-      {"slide":7,"cells":[{"r":0,"c":0,"type":"text","answers":["54"],"value":"54"},{"r":0,"c":1,"type":"text","answers":["6"],"value":"6"},{"r":0,"c":2,"type":"photo","answers":["taco"],"value":"taco.png"},{"r":1,"c":0,"type":"photo","answers":["new york"],"value":"new-york.png"},{"r":1,"c":1,"type":"photo","answers":["elephant"],"value":"elephant.png"},{"r":1,"c":2,"type":"shape","answers":["plus"],"value":{"geom":"mathPlus","color":"000000"}},{"r":2,"c":0,"type":"text","answers":["no"],"value":"NO"},{"r":2,"c":1,"type":"shape","answers":["rectangle"],"value":{"geom":"rect","color":"FFFF00"}},{"r":2,"c":2,"type":"shape","answers":["cloud","smoke"],"value":{"geom":"cloud","color":"EEEEEE"}}]},
-      {"slide":8,"cells":[{"r":0,"c":0,"type":"shape","answers":["star"],"value":{"geom":"star5","color":"0000FF"}},{"r":0,"c":1,"type":"text","answers":["go"],"value":"GO"},{"r":0,"c":2,"type":"photo","answers":["apple"],"value":"apple-1.png"},{"r":1,"c":0,"type":"photo","answers":["united states"],"value":"united-states.png"},{"r":1,"c":1,"type":"text","answers":["0"],"value":"00"},{"r":1,"c":2,"type":"text","answers":["89"],"value":"89"},{"r":2,"c":0,"type":"photo","answers":["rhino"],"value":"rhino.png"},{"r":2,"c":1,"type":"photo","answers":["parrot"],"value":"parrot.png"},{"r":2,"c":2,"type":"shape","answers":["rectangle"],"value":{"geom":"rect","color":"FFFF00"}}]}
-    ],
-    insane: [
-      {"slide":1,"cells":[{"r":0,"c":0,"type":"shape","answers":["lightning bolt"],"value":{"geom":"lightningBolt","color":"FF0000"}},{"r":0,"c":1,"type":"photo","answers":["elephant"],"value":"elephant.png"},{"r":0,"c":2,"type":"text","answers":["3"],"value":"3"},{"r":0,"c":3,"type":"photo","answers":["taco"],"value":"taco.png"},{"r":0,"c":4,"type":"photo","answers":["panda"],"value":"panda.png"},{"r":0,"c":5,"type":"photo","answers":["donut"],"value":"donut.png"},{"r":1,"c":0,"type":"photo","answers":["gorilla"],"value":"gorilla.png"},{"r":1,"c":1,"type":"text","answers":["7"],"value":"7"},{"r":1,"c":2,"type":"shape","answers":["cube"],"value":{"geom":"cube","color":"38761D"}},{"r":1,"c":3,"type":"text","answers":["9"],"value":"9"},{"r":1,"c":4,"type":"shape","answers":["heart"],"value":{"geom":"heart","color":"9900FF"}},{"r":1,"c":5,"type":"text","answers":["1"],"value":"1"},{"r":2,"c":0,"type":"shape","answers":["rectangle"],"value":{"geom":"rect","color":"FFFF00"}},{"r":2,"c":1,"type":"photo","answers":["zebra"],"value":"zebra.png"},{"r":2,"c":2,"type":"photo","answers":["hamburger"],"value":"hamburger.png"},{"r":2,"c":3,"type":"shape","answers":["sun"],"value":{"geom":"sun","color":"FF9900"}},{"r":2,"c":4,"type":"photo","answers":["cow"],"value":"cow.png"},{"r":2,"c":5,"type":"shape","answers":["triangle"],"value":{"geom":"triangle","color":"FF0000"}},{"r":3,"c":0,"type":"photo","answers":["hot dog"],"value":"hot-dog.png"},{"r":3,"c":1,"type":"photo","answers":["horse"],"value":"horse.png"},{"r":3,"c":2,"type":"shape","answers":["circle"],"value":{"geom":"ellipse","color":"4285F4"}},{"r":3,"c":3,"type":"photo","answers":["pig"],"value":"pig.png"},{"r":3,"c":5,"type":"text","answers":["4"],"value":"4"},{"r":4,"c":0,"type":"photo","answers":["french fries"],"value":"french-fries.png"},{"r":4,"c":1,"type":"text","answers":["2"],"value":"2"},{"r":4,"c":2,"type":"text","answers":["8"],"value":"8"},{"r":4,"c":3,"type":"photo","answers":["rhino"],"value":"rhino.png"},{"r":4,"c":4,"type":"photo","answers":["waffle"],"value":"waffle.png"},{"r":4,"c":5,"type":"shape","answers":["cloud"],"value":{"geom":"cloud","color":"EEEEEE"}},{"r":5,"c":0,"type":"shape","answers":["smiley face"],"value":{"geom":"smileyFace","color":"FFFF00"}},{"r":5,"c":1,"type":"text","answers":["5"],"value":"5"},{"r":5,"c":2,"type":"photo","answers":["pretzel"],"value":"pretzel.png"},{"r":5,"c":4,"type":"photo","answers":["giraffe"],"value":"giraffe.png"},{"r":5,"c":5,"type":"text","answers":["6"],"value":"6"}]}
-    ]
-  };
-  // END GENERATED DATA
+  const GRID2X2 = [
+    {"slide":1,"cells":{"topLeft":{"type":"photo","value":"image1.png","answer":"pig"},"topRight":{"type":"shape","value":{"geom":"rect","color":"FFFF00"},"answer":"rectangle"},"bottomLeft":{"type":"text","value":"oink","answer":"oink"},"bottomRight":{"type":"text","value":"9","answer":"9"}}},
+    {"slide":2,"cells":{"topLeft":{"type":"text","value":"3","answer":"3"},"topRight":{"type":"photo","value":"image3.png","answer":"gorilla"},"bottomLeft":{"type":"shape","value":{"geom":"ellipse","color":"4285F4"},"answer":"circle"},"bottomRight":{"type":"text","value":"moo","answer":"moo"}}},
+    {"slide":3,"cells":{"topLeft":{"type":"text","value":"6","answer":"6"},"topRight":{"type":"text","value":"yes","answer":"yes"},"bottomLeft":{"type":"photo","value":"image2.png","answer":"panda"},"bottomRight":{"type":"shape","value":{"geom":"triangle","color":"FF0000"},"answer":"triangle"}}},
+    {"slide":4,"cells":{"topLeft":{"type":"text","value":"2","answer":"two"},"topRight":{"type":"shape","value":{"geom":"heart","color":"9900FF"},"answer":"purple"},"bottomLeft":{"type":"photo","value":"image8.png","answer":"rhino"},"bottomRight":{"type":"text","value":"eye","answer":"eye"}}},
+    {"slide":5,"cells":{"topLeft":{"type":"photo","value":"image4.png","answer":"elephant"},"topRight":{"type":"shape","value":{"geom":"lightningBolt","color":"FF0000"},"answer":"lightning bolt"},"bottomLeft":{"type":"text","value":"potter","answer":"potter"},"bottomRight":{"type":"text","value":"2","answer":"two"}}},
+    {"slide":6,"cells":{"topLeft":{"type":"text","value":"moon","answer":"moon"},"topRight":{"type":"text","value":"8","answer":"8"},"bottomLeft":{"type":"shape","value":{"geom":"sun","color":"FF9900"},"answer":"sun"},"bottomRight":{"type":"photo","value":"image10.png","answer":"zebra"}}},
+    {"slide":7,"cells":{"topLeft":{"type":"text","value":"5","answer":"5"},"topRight":{"type":"photo","value":"image5.png","answer":"horse"},"bottomLeft":{"type":"text","value":"dog","answer":"dog"},"bottomRight":{"type":"shape","value":{"geom":"cloud","color":"EEEEEE"},"answer":"cloud"}}},
+    {"slide":8,"cells":{"topLeft":{"type":"shape","value":{"geom":"smileyFace","color":"FFFF00"},"answer":"smiley face"},"topRight":{"type":"text","value":"7","answer":"7"},"bottomLeft":{"type":"photo","value":"image6.png","answer":"cow"},"bottomRight":{"type":"text","value":"zero","answer":"zero"}}}
+  ];
+
+  const GRID3X3 = [
+    {"slide":1,"cells":{"topLeft":{"type":"photo","value":"image16.png","answer":"Rooster"},"topMiddle":{"type":"shape","value":{"geom":"cube","color":"38761D"},"answer":"Cube"},"topRight":{"type":"shape","value":{"geom":"heart","color":"9900FF"},"answer":"Heart"},"middleLeft":{"type":"text","value":"1","answer":"one(1)"},"middleMiddle":{"type":"photo","value":"image3.png","answer":"gorrilla"},"middleRight":{"type":"text","value":"red","answer":"red"},"bottomLeft":{"type":"text","value":"%","answer":"percent(division/divide-by sign)"},"bottomMiddle":{"type":"shape","value":{"geom":"ellipse","color":"4285F4"},"answer":"circle"},"bottomRight":{"type":"text","value":"00","answer":"double-zero(00)"}}},
+    {"slide":2,"cells":{"topLeft":{"type":"photo","value":"image1.png","answer":"pig"},"topMiddle":{"type":"text","value":"40","answer":"40(forty)"},"topRight":{"type":"text","value":"2","answer":"two(2)"},"middleLeft":{"type":"shape","value":{"geom":"rect","color":"FFFF00"},"answer":"rectangle"},"middleMiddle":{"type":"text","value":"blue","answer":"blue"},"middleRight":{"type":"photo","value":"image12.png","answer":"california"},"bottomLeft":{"type":"text","value":"$","answer":"dollar sign"},"bottomMiddle":{"type":"shape","value":{"geom":"lightningBolt","color":"FF0000"},"answer":"lightning bolt"},"bottomRight":{"type":"text","value":"?","answer":"question mark"}}},
+    {"slide":3,"cells":{"topLeft":{"type":"text","value":"23","answer":"23(twenty-three)"},"topMiddle":{"type":"text","value":"?","answer":"question mark"},"topRight":{"type":"text","value":"!","answer":"exclamation point"},"middleLeft":{"type":"photo","value":"image11.png","answer":"giraffe"},"middleMiddle":{"type":"photo","value":"image9.png","answer":"hawaii"},"middleRight":{"type":"photo","value":"image6.png","answer":"cow"},"bottomLeft":{"type":"shape","value":{"geom":"triangle","color":"FF0000"},"answer":"triangle"},"bottomMiddle":{"type":"photo","value":"image7.png","answer":"apple"},"bottomRight":{"type":"text","value":"32","answer":"32(thirty-two)"}}},
+    {"slide":4,"cells":{"topLeft":{"type":"photo","value":"image2.png","answer":"panda"},"topMiddle":{"type":"photo","value":"image17.png","answer":"dog"},"topRight":{"type":"text","value":"121","answer":"121"},"middleLeft":{"type":"shape","value":{"geom":"triangle","color":"FF0000"},"answer":"triangle"},"middleMiddle":{"type":"text","value":"12","answer":"12"},"middleRight":{"type":"text","value":"#","answer":"number sign"},"bottomLeft":{"type":"photo","value":"image15.png","answer":"hamburger"},"bottomMiddle":{"type":"shape","value":{"geom":"smileyFace","color":"FFFF00"},"answer":"smiley face"},"bottomRight":{"type":"photo","value":"image13.png","answer":"texas"}}},
+    {"slide":5,"cells":{"topLeft":{"type":"photo","value":"image14.png","answer":"florida"},"topMiddle":{"type":"photo","value":"image20.png","answer":"hot dog"},"topRight":{"type":"shape","value":{"geom":"cube","color":"38761D"},"answer":"cube"},"middleLeft":{"type":"text","value":"@","answer":"@"},"middleMiddle":{"type":"shape","value":{"geom":"mathPlus","color":"000000"},"answer":"plus(addition)"},"middleRight":{"type":"text","value":"70","answer":"70"},"bottomLeft":{"type":"photo","value":"image10.png","answer":"zebra"},"bottomMiddle":{"type":"photo","value":"image21.png","answer":"cat"},"bottomRight":{"type":"text","value":"88","answer":"88"}}},
+    {"slide":6,"cells":{"topLeft":{"type":"text","value":"ouch","answer":"ouch"},"topMiddle":{"type":"text","value":"49","answer":"49"},"topRight":{"type":"photo","value":"image5.png","answer":"horse"},"middleLeft":{"type":"shape","value":{"geom":"mathDivide","color":"000000"},"answer":"division"},"middleMiddle":{"type":"shape","value":{"geom":"ellipse","color":"4285F4"},"answer":"circle"},"middleRight":{"type":"shape","value":{"geom":"sun","color":"FF9900"},"answer":"sun"},"bottomLeft":{"type":"photo","value":"image25.png","answer":"alaska"},"bottomMiddle":{"type":"text","value":"222","answer":"222"},"bottomRight":{"type":"photo","value":"image18.png","answer":"french fries"}}},
+    {"slide":7,"cells":{"topLeft":{"type":"text","value":"54","answer":"54"},"topMiddle":{"type":"text","value":"6","answer":"6"},"topRight":{"type":"photo","value":"image22.png","answer":"taco"},"middleLeft":{"type":"photo","value":"image19.png","answer":"new york"},"middleMiddle":{"type":"photo","value":"image4.png","answer":"elephant"},"middleRight":{"type":"shape","value":{"geom":"mathPlus","color":"000000"},"answer":"plus"},"bottomLeft":{"type":"text","value":"NO","answer":"no"},"bottomMiddle":{"type":"shape","value":{"geom":"rect","color":"FFFF00"},"answer":"rectangle"},"bottomRight":{"type":"shape","value":{"geom":"cloud","color":"EEEEEE"},"answer":"cloud(smoke)"}}},
+    {"slide":8,"cells":{"topLeft":{"type":"shape","value":{"geom":"star5","color":"0000FF"},"answer":"star"},"topMiddle":{"type":"text","value":"GO","answer":"go"},"topRight":{"type":"photo","value":"image24.png","answer":"apple"},"middleLeft":{"type":"photo","value":"image23.png","answer":"united states"},"middleMiddle":{"type":"text","value":"00","answer":"0"},"middleRight":{"type":"text","value":"89","answer":"89"},"bottomLeft":{"type":"photo","value":"image8.png","answer":"rhino"},"bottomMiddle":{"type":"photo","value":"image26.png","answer":"parrot"},"bottomRight":{"type":"shape","value":{"geom":"rect","color":"FFFF00"},"answer":"rectangle"}}}
+  ];
 
   // ===================== SECTION B2: MODES CONFIG =====================
 
   const MODES = {
-    easy:   { name: "easy",   label: "Easy",   rows: 2, cols: 2, studyTimeSeconds: 10, contentPool: ROUNDS.easy },
-    medium: { name: "medium", label: "Medium", rows: 3, cols: 2, studyTimeSeconds: 10, contentPool: ROUNDS.medium },
-    hard:   { name: "hard",   label: "Hard",   rows: 3, cols: 3, studyTimeSeconds: 7,  contentPool: ROUNDS.hard },
-    insane: { name: "insane", label: "Insane", rows: 6, cols: 6, studyTimeSeconds: 20, contentPool: ROUNDS.insane }
+    easy:   { name: "easy",   label: "Easy",   gridSize: 2, studyTimeSeconds: 10, contentPool: GRID2X2, enabled: true },
+    medium: { name: "medium", label: "Medium", gridSize: 3, studyTimeSeconds: 10, contentPool: GRID3X3, enabled: false },
+    hard:   { name: "hard",   label: "Hard",   gridSize: 3, studyTimeSeconds: 7,  contentPool: GRID3X3, enabled: true },
+    insane: { name: "insane", label: "Insane", gridSize: null, studyTimeSeconds: null, contentPool: [], enabled: false }
   };
 
-  // Grids with 2 or 3 rows/columns are asked by name ("bottom right"); bigger ones by number ("row 1 column 2").
-  const ROW_NAMES = { 2: ["top", "bottom"], 3: ["top", "middle", "bottom"] };
-  const COL_NAMES = { 2: ["left", "right"], 3: ["left", "middle", "right"] };
-
-  function positionLabel(mode, cell) {
-    if (!ROW_NAMES[mode.rows] || !COL_NAMES[mode.cols]) {
-      return `row ${cell.r + 1} column ${cell.c + 1}`;
-    }
-    return `${ROW_NAMES[mode.rows][cell.r]} ${COL_NAMES[mode.cols][cell.c]}`;
-  }
+  const POSITION_LABELS = {
+    topLeft: "top left", topMiddle: "top middle", topRight: "top right",
+    middleLeft: "middle left", middleMiddle: "middle middle", middleRight: "middle right",
+    bottomLeft: "bottom left", bottomMiddle: "bottom middle", bottomRight: "bottom right"
+  };
 
   // ===================== SECTION B3: SHAPE RENDERING =====================
 
@@ -428,7 +361,7 @@
   const SHAPES = {
     rect: (color) => `<div style="width:70%;height:70%;background:${hex(color)};border-radius:4px;"></div>`,
     ellipse: (color) => `<div style="width:70%;height:70%;background:${hex(color)};border-radius:50%;"></div>`,
-    triangle: (color) => `<svg viewBox="0 0 100 90"><polygon fill="${hex(color)}" points="50,4 96,86 4,86"/></svg>`,
+    triangle: (color) => `<div style="width:0;height:0;border-left:40px solid transparent;border-right:40px solid transparent;border-bottom:70px solid ${hex(color)};"></div>`,
     mathPlus: (color) => `<div style="position:relative;width:60%;height:60%;">
         <div style="position:absolute;top:40%;left:0;width:100%;height:20%;background:${hex(color)};border-radius:3px;"></div>
         <div style="position:absolute;left:40%;top:0;height:100%;width:20%;background:${hex(color)};border-radius:3px;"></div>
@@ -494,143 +427,18 @@
   }
 
   // ===================== SECTION B4: ANSWER CHECKING =====================
-  // A response is correct when it CONTAINS an accepted answer as whole words, so "red lightning bolt"
-  // and "lightning" both count for "lightning bolt". Numbers can be typed as digits or words.
 
-  // Extra accepted wording, keyed by the answer as written in the key. Add to this list as players surprise you.
-  const ALIASES = {
-    "lightning bolt": ["lightning", "lightening", "lightening bolt"],
-    "smiley face": ["smiley", "smile", "happy face"],
-    "hot dog": ["hotdog"],
-    "french fries": ["fries", "french fry", "fry"],
-    "ice cream": ["icecream"],
-    "fried egg": ["egg", "sunny side up"],
-    "hamburger": ["burger", "cheeseburger"],
-    "cupcake": ["cup cake"],
-    "eggplant": ["egg plant", "aubergine"],
-    "pineapple": ["pine apple"],
-    "watermelon": ["water melon"],
-    "strawberry": ["straw berry"],
-    "donut": ["doughnut"],
-    "rhino": ["rhinoceros"],
-    "tv": ["television", "t v"],
-    "united states": ["usa", "u s a", "us", "america", "united states of america"],
-    "circle": ["oval", "ellipse"],
-    "number sign": ["hashtag", "hash tag", "hash", "pound", "pound sign", "hash sign"],
-    "exclamation point": ["exclamation mark", "exclamation"],
-    "question mark": ["question"],
-    "dollar sign": ["dollar", "dollars"],
-    "percent": ["percentage", "percent sign"],
-    "division": ["divide", "divide sign", "division sign", "divided by"],
-    "divide by sign": ["divided by"],
-    "plus": ["plus sign", "add", "addition"],
-    "addition": ["plus sign", "add"],
-    "@": ["at", "at sign", "at symbol"],
-    "00": ["double zero", "double 0"],
-    "double zero": ["double 0"]
-  };
-
-  const ONES = ["zero", "one", "two", "three", "four", "five", "six", "seven", "eight", "nine", "ten",
-    "eleven", "twelve", "thirteen", "fourteen", "fifteen", "sixteen", "seventeen", "eighteen", "nineteen"];
-  const TENS = ["", "", "twenty", "thirty", "forty", "fifty", "sixty", "seventy", "eighty", "ninety"];
-
-  function numberToWords(n) {
-    if (n < 20) return ONES[n];
-    if (n < 100) return TENS[Math.floor(n / 10)] + (n % 10 ? " " + ONES[n % 10] : "");
-    const rest = n % 100;
-    return ONES[Math.floor(n / 100)] + " hundred" + (rest ? " " + numberToWords(rest) : "");
-  }
-
-  const WORD_TO_NUMBER = new Map();
-  for (let i = 0; i < 1000; i++) WORD_TO_NUMBER.set(numberToWords(i), i);
-
-  // "51" -> ["51", "fifty one", "fiftyone"]; "121" also gets "one hundred and twenty one".
-  function numberForms(n) {
-    const words = numberToWords(n);
-    const forms = [String(n), words];
-    if (n > 20 && n < 100 && n % 10) forms.push(words.replace(" ", ""));
-    if (n > 100 && n % 100) forms.push(ONES[Math.floor(n / 100)] + " hundred and " + numberToWords(n % 100));
-    return forms;
-  }
-
-  function toNumber(normalized) {
-    if (/^(0|[1-9]\d{0,2})$/.test(normalized)) return parseInt(normalized, 10); // "00" is not the number zero
-    return WORD_TO_NUMBER.has(normalized) ? WORD_TO_NUMBER.get(normalized) : null;
-  }
-
-  // Lowercase; hyphens/punctuation become spaces; symbols such as ? or # stay as their own words.
-  function normalize(str) {
-    return String(str).toLowerCase()
-      .replace(/['’]/g, "")
-      .replace(/[-_\/]/g, " ")
-      .replace(/([@#$%?!+*&=<>])/g, " $1 ")
-      .replace(/[^a-z0-9@#$%?!+*&=<>\s]/g, " ")
-      .replace(/\s+/g, " ")
-      .trim();
-  }
-
-  // -> [{ tokens: [...], fuzzy: bool }]. Number words are never fuzzy, so "eighty" can't pass for "eight".
-  function buildAccepted(cell) {
-    const accepted = [];
-    const seen = new Set();
-    const add = (phrase, fuzzy) => {
-      const n = normalize(phrase);
-      if (!n || seen.has(n)) return;
-      seen.add(n);
-      accepted.push({ tokens: n.split(" "), fuzzy });
-    };
-    const sources = cell.answers.slice();
-    if (cell.type === "text") sources.push(cell.value);
-    sources.forEach(src => {
-      const n = normalize(src);
-      (ALIASES[n] || []).forEach(a => add(a, true));
-      const num = toNumber(n);
-      if (num !== null) numberForms(num).forEach(f => add(f, false));
-      else add(n, true);
-    });
-    return accepted;
-  }
-
-  // Same word, or one slip: a plural "s", or a single typo in words of 5+ letters.
-  function withinOneEdit(a, b) {
-    if (a === b) return true;
-    if (Math.abs(a.length - b.length) > 1) return false;
-    let i = 0;
-    while (i < a.length && i < b.length && a[i] === b[i]) i++;
-    if (a.length === b.length) {
-      return a.slice(i + 1) === b.slice(i + 1) ||
-        (a[i] === b[i + 1] && a[i + 1] === b[i] && a.slice(i + 2) === b.slice(i + 2));
+  function getAcceptableAnswers(cell) {
+    const m = cell.answer.match(/^(.*?)\(([^)]*)\)\s*$/);
+    let accepted = m ? [m[1].trim(), ...m[2].split("/").map(s => s.trim())] : [cell.answer];
+    if (cell.type === "text" && typeof cell.value === "string") {
+      accepted.push(cell.value);
     }
-    return a.length > b.length ? a.slice(i + 1) === b.slice(i) : a.slice(i) === b.slice(i + 1);
-  }
-
-  // Every word that is a right answer somewhere, so a typo check never turns one real answer (parrot) into another (carrot).
-  const KNOWN_WORDS = new Set();
-  Object.values(ROUNDS).forEach(pool => pool.forEach(round => round.cells.forEach(cell => {
-    buildAccepted(cell).forEach(e => e.tokens.forEach(t => KNOWN_WORDS.add(t)));
-  })));
-
-  function tokenMatches(typed, wanted, fuzzy) {
-    if (typed === wanted) return true;
-    if (!fuzzy) return false;
-    if (wanted.length >= 3 && (typed === wanted + "s" || typed === wanted + "es")) return true;
-    return wanted.length >= 5 && !KNOWN_WORDS.has(typed) && withinOneEdit(typed, wanted);
+    return accepted.map(s => s.trim().toLowerCase());
   }
 
   function isCorrect(cell, input) {
-    const typed = normalize(input).split(" ").filter(Boolean);
-    return buildAccepted(cell).some(entry => {
-      for (let s = 0; s + entry.tokens.length <= typed.length; s++) {
-        if (entry.tokens.every((tok, k) => tokenMatches(typed[s + k], tok, entry.fuzzy))) return true;
-      }
-      return false;
-    });
-  }
-
-  // What the "Incorrect" screen shows: the key's first answer, or the digits for number cells.
-  function displayAnswer(cell) {
-    if (cell.type === "text" && toNumber(normalize(cell.value)) !== null) return cell.value;
-    return cell.answers[0];
+    return getAcceptableAnswers(cell).includes(input.trim().toLowerCase());
   }
 
   // ===================== SECTION B5: STATE MACHINE =====================
@@ -639,15 +447,13 @@
     screen: "menu",
     mode: null,
     round: null,
-    question: null,
+    questionKey: null,
     lastRoundIndexByMode: {},
     rafHandle: null,
+    blackoutTimeoutHandle: null,
     advanceTimeoutHandle: null,
     streak: 0,
-    answered: false,
-    pendingMode: null,
-    pendingSubmit: Promise.resolve(),
-    roundToken: 0
+    answered: false
   };
 
   const STREAK_VISIBLE_SCREENS = ["screen-study", "screen-question", "screen-feedback"];
@@ -662,8 +468,6 @@
 
     const streakBar = document.getElementById("streak-bar");
     streakBar.classList.toggle("visible", STREAK_VISIBLE_SCREENS.includes(id));
-
-    if (id === "screen-menu") renderLeaderboard();
   }
 
   function updateStreakDisplay() {
@@ -674,6 +478,10 @@
     if (appState.rafHandle !== null) {
       cancelAnimationFrame(appState.rafHandle);
       appState.rafHandle = null;
+    }
+    if (appState.blackoutTimeoutHandle !== null) {
+      clearTimeout(appState.blackoutTimeoutHandle);
+      appState.blackoutTimeoutHandle = null;
     }
     if (appState.advanceTimeoutHandle !== null) {
       clearTimeout(appState.advanceTimeoutHandle);
@@ -695,37 +503,19 @@
   }
 
   function onSelectMode(mode) {
-    if (!getPlayerName()) {
-      appState.pendingMode = mode;
-      showNamePrompt();
+    appState.mode = mode;
+    if (!mode.enabled) {
+      document.getElementById("uc-text").textContent = `${mode.label} mode isn't ready yet — check back soon!`;
+      showScreen("screen-under-construction");
       return;
     }
-    openInstructions(mode);
-  }
-
-  function openInstructions(mode) {
-    appState.mode = mode;
     appState.streak = 0;
     updateStreakDisplay();
     document.getElementById("instructions-mode-badge").textContent = mode.label;
     document.getElementById("instructions-text").textContent =
-      `You will be given ${mode.studyTimeSeconds} seconds to memorize the objects on a ${mode.cols}x${mode.rows} grid. ` +
+      `You will be given ${mode.studyTimeSeconds} seconds to memorize the objects on a ${mode.gridSize}x${mode.gridSize} grid. ` +
       `After time's up, you will be asked to recall the item in a specific location.`;
     showScreen("screen-instructions");
-    preloadPhotos(mode);
-  }
-
-  // Warm the cache while the player reads the rules, so photos don't pop in after the study timer starts.
-  function preloadPhotos(mode) {
-    mode.contentPool.forEach(round => round.cells.forEach(cell => {
-      if (cell.type === "photo") new Image().src = `assets/images/${cell.value}`;
-    }));
-  }
-
-  // Resolves once every image is decoded (or after a few seconds, so a slow connection can't stall the game).
-  function whenImagesReady(images) {
-    const decoded = Promise.all(Array.from(images, img => (img.decode ? img.decode() : Promise.resolve()).catch(() => {})));
-    return Promise.race([decoded, new Promise(resolve => setTimeout(resolve, 4000))]);
   }
 
   // ---- Round selection ----
@@ -740,46 +530,33 @@
     return pool[idx];
   }
 
-  function pickQuestionCell(round) {
-    return round.cells[Math.floor(Math.random() * round.cells.length)];
+  function pickQuestionKey(round) {
+    const keys = Object.keys(round.cells);
+    return keys[Math.floor(Math.random() * keys.length)];
   }
 
   // ---- Study screen ----
 
-  // round / question are optional overrides (used by tests); normally both are random.
-  function startRound(mode, round, question) {
+  function startRound(mode) {
     clearTimers();
-    appState.round = round || pickRound(mode);
-    appState.question = question || pickQuestionCell(appState.round);
+    appState.round = pickRound(mode);
+    appState.questionKey = pickQuestionKey(appState.round);
 
     document.getElementById("study-mode-badge").textContent = mode.label;
-    renderGrid(mode, appState.round);
-
-    showScreen("screen-study");
-    const token = ++appState.roundToken;
-    whenImagesReady(document.querySelectorAll("#study-grid img")).then(() => {
-      if (token === appState.roundToken && appState.screen === "screen-study") runStudyTimer(mode.studyTimeSeconds);
-    });
-  }
-
-  function renderGrid(mode, round) {
     const grid = document.getElementById("study-grid");
-    grid.style.setProperty("--rows", String(mode.rows));
-    grid.style.setProperty("--cols", String(mode.cols));
-    grid.style.aspectRatio = `${mode.cols} / ${mode.rows}`;
-    grid.classList.toggle("dense", mode.rows * mode.cols > 9);
+    grid.dataset.size = String(mode.gridSize);
     grid.innerHTML = "";
 
-    const byPosition = new Map(round.cells.map(c => [c.r + "," + c.c, c]));
-    for (let r = 0; r < mode.rows; r++) {
-      for (let c = 0; c < mode.cols; c++) {
-        const cell = byPosition.get(r + "," + c);
-        const cellEl = document.createElement("div");
-        cellEl.className = "cell";
-        if (cell) cellEl.innerHTML = renderCellContent(cell);
-        grid.appendChild(cellEl);
-      }
-    }
+    Object.keys(appState.round.cells).forEach(key => {
+      const cell = appState.round.cells[key];
+      const cellEl = document.createElement("div");
+      cellEl.className = "cell";
+      cellEl.innerHTML = renderCellContent(cell);
+      grid.appendChild(cellEl);
+    });
+
+    showScreen("screen-study");
+    runStudyTimer(mode.studyTimeSeconds);
   }
 
   function runStudyTimer(seconds) {
@@ -795,7 +572,7 @@
 
       if (elapsed >= durationMs) {
         appState.rafHandle = null;
-        enterQuestion();
+        enterBlackout();
       } else {
         appState.rafHandle = requestAnimationFrame(tick);
       }
@@ -804,11 +581,22 @@
     appState.rafHandle = requestAnimationFrame(tick);
   }
 
+  // ---- Blackout ----
+
+  function enterBlackout() {
+    showScreen("screen-blackout");
+    appState.blackoutTimeoutHandle = setTimeout(() => {
+      appState.blackoutTimeoutHandle = null;
+      enterQuestion();
+    }, 2000);
+  }
+
   // ---- Question ----
 
   function enterQuestion() {
     document.getElementById("question-mode-badge").textContent = appState.mode.label;
-    document.getElementById("question-text").textContent = positionLabel(appState.mode, appState.question);
+    const label = POSITION_LABELS[appState.questionKey] || appState.questionKey;
+    document.getElementById("question-text").textContent = `What was in the ${label} position?`;
     const input = document.getElementById("answer-input");
     input.value = "";
     appState.answered = false;
@@ -821,7 +609,7 @@
     appState.answered = true;
 
     const input = document.getElementById("answer-input");
-    const cell = appState.question;
+    const cell = appState.round.cells[appState.questionKey];
     const correct = isCorrect(cell, input.value);
 
     const resultEl = document.getElementById("feedback-result");
@@ -841,189 +629,20 @@
         startRound(appState.mode);
       }, 1200);
     } else {
-      const finalStreak = appState.streak;
       appState.streak = 0;
       updateStreakDisplay();
-      appState.pendingSubmit = submitScore(appState.mode.name, getPlayerName(), finalStreak);
       resultEl.textContent = "Incorrect";
       resultEl.className = "feedback-result incorrect";
-      detailEl.textContent = `The correct answer was "${displayAnswer(cell)}".` +
-        (finalStreak > 0 ? ` Final streak: ${finalStreak}.` : "");
+      detailEl.textContent = `The correct answer was "${cell.answer.replace(/\(.*\)/, "").trim()}".`;
       buttonsEl.style.display = "flex";
       showScreen("screen-feedback");
     }
-  }
-
-  // ===================== SECTION B6: PLAYER NAME + LEADERBOARD =====================
-  // Scores live in a Firebase Realtime Database (REST, no SDK) so every player shares one leaderboard.
-  // Paste your database URL below (see README.md). While it's empty, or if it can't be reached,
-  // scores are kept in this browser's localStorage instead.
-
-  const FIREBASE_URL = "https://memory-game-c88cc-default-rtdb.firebaseio.com"; // e.g. "https://my-memory-game-default-rtdb.firebaseio.com"
-  const REMOTE_TIMEOUT_MS = 5000;
-  const LS_NAME = "memoryGame.playerName";
-  const LS_SCORES = "memoryGame.localScores";
-
-  function lsGet(key, fallback) {
-    try {
-      const raw = localStorage.getItem(key);
-      return raw === null ? fallback : JSON.parse(raw);
-    } catch (e) { return fallback; }
-  }
-
-  function lsSet(key, value) {
-    try { localStorage.setItem(key, JSON.stringify(value)); } catch (e) { /* storage blocked */ }
-  }
-
-  function getPlayerName() { return lsGet(LS_NAME, "") || appState.sessionName || ""; }
-
-  function setPlayerName(name) {
-    appState.sessionName = name;
-    lsSet(LS_NAME, name);
-  }
-
-  function cleanName(raw) {
-    return raw.replace(/[\u0000-\u001f\u007f]/g, "").replace(/\s+/g, " ").trim().slice(0, 20);
-  }
-
-  // Same name in any capitalization is the same player.
-  function playerKey(name) {
-    return name.toLowerCase().replace(/[.$#\[\]\/\s]+/g, "_").slice(0, 20) || "player";
-  }
-
-  async function remoteRequest(path, options) {
-    const controller = new AbortController();
-    const timer = setTimeout(() => controller.abort(), REMOTE_TIMEOUT_MS);
-    try {
-      const res = await fetch(`${FIREBASE_URL.replace(/\/+$/, "")}/${path}`, Object.assign({ signal: controller.signal }, options));
-      if (!res.ok) throw new Error("HTTP " + res.status);
-      return await res.json();
-    } finally {
-      clearTimeout(timer);
-    }
-  }
-
-  function localTop(mode) {
-    const entries = Object.values(lsGet(LS_SCORES, {})[mode] || {});
-    return entries.reduce((best, e) => (!best || e.streak > best.streak ? e : best), null);
-  }
-
-  function saveLocalScore(mode, key, entry) {
-    const all = lsGet(LS_SCORES, {});
-    all[mode] = all[mode] || {};
-    if (!all[mode][key] || all[mode][key].streak < entry.streak) all[mode][key] = entry;
-    lsSet(LS_SCORES, all);
-  }
-
-  // -> { entry: {name, streak} | null, online: bool }
-  async function getTopScore(mode) {
-    if (FIREBASE_URL) {
-      try {
-        const data = await remoteRequest(`scores/${mode}.json?orderBy=%22streak%22&limitToLast=1`);
-        return { entry: data ? Object.values(data)[0] : null, online: true };
-      } catch (e) { /* fall back to this device's scores */ }
-    }
-    return { entry: localTop(mode), online: false };
-  }
-
-  async function submitScore(mode, name, streak) {
-    if (!name || streak <= 0) return;
-    const key = playerKey(name);
-    const entry = { name, streak, ts: Date.now() };
-    saveLocalScore(mode, key, entry);
-    if (!FIREBASE_URL) return;
-    try {
-      const path = `scores/${mode}/${encodeURIComponent(key)}.json`;
-      const existing = await remoteRequest(path);
-      if (existing && existing.streak >= streak) return; // only personal bests are saved
-      await remoteRequest(path, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(entry)
-      });
-    } catch (e) {
-      console.warn("Couldn't save score online; kept on this device.", e);
-    }
-  }
-
-  let leaderboardRequest = 0;
-
-  async function renderLeaderboard() {
-    const request = ++leaderboardRequest;
-    const list = document.getElementById("leaderboard-list");
-    const note = document.getElementById("leaderboard-note");
-    const playerEl = document.getElementById("leaderboard-player");
-
-    await appState.pendingSubmit.catch(() => {});
-    const results = await Promise.all(Object.values(MODES).map(m => getTopScore(m.name)));
-    if (request !== leaderboardRequest) return; // a newer render superseded this one
-
-    list.innerHTML = "";
-    Object.values(MODES).forEach((mode, i) => {
-      const entry = results[i].entry;
-      const li = document.createElement("li");
-      const label = document.createElement("span");
-      label.className = "lb-mode";
-      label.textContent = mode.label;
-      const value = document.createElement("span");
-      value.className = "lb-entry" + (entry ? "" : " empty");
-      value.textContent = entry ? `${entry.name} | ${entry.streak}` : "-";
-      li.append(label, value);
-      list.appendChild(li);
-    });
-
-    const online = results.every(r => r.online);
-    note.textContent = online ? "" : FIREBASE_URL
-      ? "Can't reach the online leaderboard. Showing scores from this device."
-      : "Scores are saved on this device only.";
-
-    const name = getPlayerName();
-    playerEl.textContent = "";
-    if (name) {
-      playerEl.append("Playing as ");
-      const strong = document.createElement("strong");
-      strong.textContent = name;
-      const change = document.createElement("a");
-      change.textContent = "change";
-      change.addEventListener("click", () => { appState.pendingMode = null; showNamePrompt(); });
-      playerEl.append(strong, " · ", change);
-    }
-  }
-
-  function showNamePrompt() {
-    const input = document.getElementById("name-input");
-    input.value = getPlayerName();
-    showScreen("screen-name");
-    input.focus();
-    input.select();
-  }
-
-  function saveName() {
-    const name = cleanName(document.getElementById("name-input").value);
-    if (!name) {
-      document.getElementById("name-input").focus();
-      return;
-    }
-    setPlayerName(name);
-    const mode = appState.pendingMode;
-    appState.pendingMode = null;
-    if (mode) openInstructions(mode);
-    else showScreen("screen-menu");
   }
 
   // ===================== SECTION B7: WIRING =====================
 
   function init() {
     renderMenu();
-
-    document.getElementById("btn-save-name").addEventListener("click", saveName);
-    document.getElementById("name-input").addEventListener("keydown", (e) => {
-      if (e.key === "Enter") saveName();
-    });
-    document.getElementById("btn-name-back").addEventListener("click", () => {
-      appState.pendingMode = null;
-      showScreen("screen-menu");
-    });
 
     document.getElementById("btn-start-round").addEventListener("click", () => startRound(appState.mode));
     document.getElementById("btn-instructions-back").addEventListener("click", () => showScreen("screen-menu"));
@@ -1039,13 +658,12 @@
       showScreen("screen-menu");
     });
 
+    document.getElementById("btn-uc-back").addEventListener("click", () => showScreen("screen-menu"));
+
     showScreen("screen-menu");
   }
 
   init();
-
-  // Small hook for automated checks in the browser console; the game itself doesn't use it.
-  window.__memoryGame = { MODES, ROUNDS, appState, isCorrect, startRound, positionLabel, submitScore, getTopScore };
 })();
 </script>
 </body>

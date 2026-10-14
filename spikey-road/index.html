@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <title>Road to Veracruz</title>
+  <meta name="description" content="A spikey desert adventure - a tiny pixel-art browser game." />
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🌵</text></svg>" />
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <div id="game-wrapper">
+    <div id="game-root">
+      <canvas id="road-canvas" width="160" height="144"></canvas>
+
+      <div id="touch-hint" class="hidden" aria-hidden="true">
+        <div class="hint-half hint-left">
+          <span>&#9650;<br />tap above you<br />to move up</span>
+          <span>tap below you<br />to move down<br />&#9660;</span>
+        </div>
+        <div class="hint-half hint-right"><span>tap to<br />shoot</span></div>
+      </div>
+
+      <div id="overlay" class="overlay">
+        <div class="box">
+          <h1 id="overlay-title">Road to Veracruz</h1>
+          <p id="overlay-sub" class="sub">A spikey desert adventure</p>
+          <div id="overlay-body"><p>The journey to Veracruz is long and dangerous</p><p>&nbsp;</p><p>press: "shoot" to kill rattlesnakes in your path</p><p>press: "up/down" to avoid spikey cactuses</p><p>press: "jump" to jump over rocks and boulders</p></div>
+          <p class="keys">W / S or ↑ / ↓ &nbsp;lane &nbsp;·&nbsp; Space / X &nbsp;jump &nbsp;·&nbsp; F / Z &nbsp;shoot &nbsp;·&nbsp; P &nbsp;pause</p>
+          <p id="overlay-best" class="best"></p>
+          <button id="overlay-button" class="pixel-btn" type="button">vamos</button>
+        </div>
+      </div>
+    </div>
+
+    <button id="jump-bar" class="pixel-btn" type="button">SPACE / JUMP</button>
+  </div>
+
+  <script src="game.js"></script>
+  <script src="main.js"></script>
+</body>
+</html>

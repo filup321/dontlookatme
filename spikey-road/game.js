@@ -44,6 +44,9 @@ const RoadGame = (() => {
   // The canvas is ROAD_SCALE times denser than the logical 120x176 road, so the
   // detailed snake art stays sharp. All game code keeps using logical units.
   const ROAD_SCALE = 3;
+  // Obstacle sprites are hard-edged pixel art drawn at this many screen pixels per
+  // art pixel, so their grain matches the road backdrop.
+  const ART_PX = 2;
   const SPRITES = {};
 
   function loadSprite(key, src) {
@@ -288,8 +291,8 @@ const RoadGame = (() => {
   function drawSnake(o) {
     const img = sprite(o.dead ? 'snakeDead' : 'snake');
     if (!img) return;
-    const w = img.naturalWidth / ROAD_SCALE;
-    const h = img.naturalHeight / ROAD_SCALE;
+    const w = img.naturalWidth * ART_PX / ROAD_SCALE;
+    const h = img.naturalHeight * ART_PX / ROAD_SCALE;
     const x = (ROAD_W - w) / 2;
     const y = o.y + (o.h - h) / 2;
     ctx.save();
@@ -301,12 +304,13 @@ const RoadGame = (() => {
     ctx.restore();
   }
 
-  // A row of rocks of different sizes with shrubs between them, spanning the road.
+  // A row of rocks of different sizes with shrubs between them, centred on the track.
   function drawBoulder(o) {
     const img = sprite('rocks');
     if (!img) return;
-    const h = img.naturalHeight * (ROAD_W / img.naturalWidth);
-    ctx.drawImage(img, 0, o.y + (o.h - h) / 2, ROAD_W, h);
+    const w = img.naturalWidth * ART_PX / ROAD_SCALE;
+    const h = img.naturalHeight * ART_PX / ROAD_SCALE;
+    ctx.drawImage(img, (ROAD_W - w) / 2, o.y + (o.h - h) / 2, w, h);
   }
 
   function drawBullet(b) {

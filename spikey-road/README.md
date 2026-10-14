@@ -12,11 +12,13 @@ A spikey desert adventure. A tiny pixel-art browser game. Plain HTML, CSS and Ja
 Reach the end of the road (100%) to win. Your best progress is saved in your browser.
 
 ## Controls
+The road scrolls down the screen and your character stays at the bottom.
+
 | Action | Keyboard | Touch |
 |---|---|---|
-| Change lane | W / S or Up / Down | tap the road above / below you |
-| Jump | Space, X or Right | "jump" bar under the road |
-| Shoot | F or Z | "shoot" bar down the right side of the road |
+| Move left / right | Left / Right or A / D | swipe left / right |
+| Jump | Up, Space, W or X | swipe up |
+| Shoot | F or Z | tap |
 | Pause | P | |
 
 Touch controls appear automatically on phones and tablets. A hint is shown on the first play.

@@ -7,12 +7,15 @@ function rectsAt(ctx, x, y, rects) {
 }
 
 // Road mini-game: overhead scrolling desert trail between Valladolid and Veracruz.
-// Player is fixed on the left third; obstacles scroll right-to-left. Cactuses are
-// dodged by changing lane (up/down), rattlesnakes span the whole road and must be
-// shot, boulders span the whole road and must be jumped.
+// Vertical version: the player is fixed near the bottom of a portrait screen and
+// the road scrolls down toward them. Cactuses are dodged by changing lane
+// (left/right), rattlesnakes span the whole road and must be shot, boulders span
+// the whole road and must be jumped.
 
-const ROAD_LANES = [28, 72, 116];
-const ROAD_PLAYER_X = 28;
+const ROAD_W = 120;
+const ROAD_H = 176;
+const ROAD_LANES = [20, 60, 100]; // lane centres (x)
+const ROAD_PLAYER_Y = 148;
 const ROAD_WIN_DISTANCE = 2600;
 const ROAD_SPAWN_MIN = 650;
 const ROAD_SPAWN_MAX = 1050;
@@ -37,7 +40,7 @@ const RoadGame = (() => {
   function start(callbacks) {
     onWin = callbacks.onWin || onWin;
     onLose = callbacks.onLose || onLose;
-    player = { lane: 1, y: ROAD_LANES[1], jumping: false, jumpUntil: 0 };
+    player = { lane: 1, x: ROAD_LANES[1] - 8, jumping: false, jumpUntil: 0 };
     obstacles = [];
     bullets = [];
     distance = 0;
@@ -59,6 +62,7 @@ const RoadGame = (() => {
     return min + Math.random() * (max - min);
   }
 
+  // dir: -1 = one lane left, 1 = one lane right
   function setLane(dir) {
     if (!running) return;
     player.lane = Math.max(0, Math.min(ROAD_LANES.length - 1, player.lane + dir));
@@ -72,25 +76,26 @@ const RoadGame = (() => {
 
   function shoot() {
     if (!running) return;
-    bullets.push({ x: ROAD_PLAYER_X + 14, y: player.y + 6 });
+    bullets.push({ x: player.x + 7, y: ROAD_PLAYER_Y - 4 });
   }
 
   function handleKeydown(e) {
     if (!running) return;
-    if (e.key === 'ArrowUp' || e.key === 'w') { e.preventDefault(); setLane(-1); }
-    else if (e.key === 'ArrowDown' || e.key === 's') { e.preventDefault(); setLane(1); }
-    else if (e.key === ' ' || e.key === 'ArrowRight' || e.key === 'x') { e.preventDefault(); jump(); }
+    if (e.key === 'ArrowLeft' || e.key === 'a') { e.preventDefault(); setLane(-1); }
+    else if (e.key === 'ArrowRight' || e.key === 'd') { e.preventDefault(); setLane(1); }
+    else if (e.key === 'ArrowUp' || e.key === 'w' || e.key === ' ' || e.key === 'x') { e.preventDefault(); jump(); }
     else if (e.key === 'f' || e.key === 'z') { e.preventDefault(); shoot(); }
   }
 
+  // o.y is the obstacle's top edge; o.h is how far it extends down the road.
   function spawnObstacle() {
     const roll = Math.random();
     if (roll < 0.4) {
-      obstacles.push({ type: 'cactus', x: 176, lane: Math.floor(Math.random() * ROAD_LANES.length), w: 14 });
+      obstacles.push({ type: 'cactus', y: -30, lane: Math.floor(Math.random() * ROAD_LANES.length), h: 24 });
     } else if (roll < 0.7) {
-      obstacles.push({ type: 'snake', x: 176, w: 20, dead: false });
+      obstacles.push({ type: 'snake', y: -30, h: 20, dead: false });
     } else {
-      obstacles.push({ type: 'boulder', x: 176, w: 18 });
+      obstacles.push({ type: 'boulder', y: -30, h: 22 });
     }
   }
 
@@ -99,7 +104,7 @@ const RoadGame = (() => {
     speed = Math.min(150, 70 + distance / 40);
 
     if (player.jumping && performance.now() > player.jumpUntil) player.jumping = false;
-    player.y += (ROAD_LANES[player.lane] - player.y) * Math.min(1, dt * 10);
+    player.x += (ROAD_LANES[player.lane] - 8 - player.x) * Math.min(1, dt * 12);
 
     spawnTimer += dt * 1000;
     if (spawnTimer >= nextSpawnAt) {
@@ -108,23 +113,23 @@ const RoadGame = (() => {
       spawnObstacle();
     }
 
-    obstacles.forEach((o) => { o.x -= speed * dt; });
-    bullets.forEach((b) => { b.x += 260 * dt; });
+    obstacles.forEach((o) => { o.y += speed * dt; });
+    bullets.forEach((b) => { b.y -= 260 * dt; });
 
     bullets.forEach((b) => {
       obstacles.forEach((o) => {
-        if (o.type === 'snake' && !o.dead && b.x >= o.x && b.x <= o.x + o.w) {
+        if (o.type === 'snake' && !o.dead && b.y >= o.y && b.y <= o.y + o.h) {
           o.dead = true;
           b.spent = true;
         }
       });
     });
-    bullets = bullets.filter((b) => !b.spent && b.x < 176);
+    bullets = bullets.filter((b) => !b.spent && b.y > -10);
 
     let hit = false;
     obstacles.forEach((o) => {
       if (o.resolved) return;
-      const overlapsPlayer = o.x <= ROAD_PLAYER_X + 12 && o.x + o.w >= ROAD_PLAYER_X;
+      const overlapsPlayer = o.y + o.h >= ROAD_PLAYER_Y && o.y <= ROAD_PLAYER_Y + 12;
       if (!overlapsPlayer) return;
       o.resolved = true;
       if (o.type === 'cactus') {
@@ -136,7 +141,7 @@ const RoadGame = (() => {
       }
     });
 
-    obstacles = obstacles.filter((o) => o.x > -30);
+    obstacles = obstacles.filter((o) => o.y < ROAD_H + 10);
 
     if (hit) {
       stop();
@@ -153,27 +158,27 @@ const RoadGame = (() => {
 
   function drawRoad() {
     const scrollA = distance % 16;
-    for (let i = -1; i < 11; i += 1) {
-      const x = i * 16 - scrollA;
+    for (let i = -1; i < 12; i += 1) {
+      const y = i * 16 + scrollA;
       ctx.fillStyle = '#cdae6c';
-      ctx.fillRect(x, 0, 16, 144);
+      ctx.fillRect(0, y, ROAD_W, 16);
       ctx.fillStyle = '#c2a05f';
-      ctx.fillRect(x, 0, 8, 144);
+      ctx.fillRect(0, y, ROAD_W, 8);
     }
     const scrollB = distance % 20;
     for (let laneIdx = 0; laneIdx < ROAD_LANES.length - 1; laneIdx += 1) {
-      const dividerY = (ROAD_LANES[laneIdx] + ROAD_LANES[laneIdx + 1]) / 2;
-      for (let i = -1; i < 11; i += 1) {
-        const x = i * 20 - scrollB;
+      const dividerX = (ROAD_LANES[laneIdx] + ROAD_LANES[laneIdx + 1]) / 2;
+      for (let i = -1; i < 10; i += 1) {
+        const y = i * 20 + scrollB;
         ctx.fillStyle = '#8a6a4a';
-        ctx.fillRect(x, dividerY, 10, 2);
+        ctx.fillRect(dividerX, y, 2, 10);
       }
     }
   }
 
   function drawCactus(o) {
-    const y = ROAD_LANES[o.lane] - 20;
-    rectsAt(ctx, o.x, y, [
+    const x = ROAD_LANES[o.lane] - 7;
+    rectsAt(ctx, x, o.y, [
       [4, 4, 6, 20, '#3a6a2a'],
       [0, 8, 4, 4, '#3a6a2a'],
       [0, 4, 4, 4, '#3a6a2a'],
@@ -183,45 +188,44 @@ const RoadGame = (() => {
     ]);
   }
 
-  // Snake's hitbox is still the full-height vertical bar (o.x..o.x+o.w); the
-  // body just winds side to side within it via a sine offset, head at the
-  // top with eyes, rattle at the tail.
+  // Snake's hitbox spans the full road width (o.y..o.y+o.h); the body winds up
+  // and down within it via a sine offset, head at the left with eyes, rattle at
+  // the tail on the right.
   function drawSnake(o) {
     const bodyA = o.dead ? '#5a6a4a' : '#4f8a3a';
     const bodyB = o.dead ? '#455a3c' : '#376b28';
     const eyeColor = '#1a1a1a';
     const rattleColor = o.dead ? '#7a6a5a' : '#c9a86a';
-    const cx = o.x + o.w / 2;
-    const amp = Math.max(2, Math.min(7, (o.w - 6) / 2));
-    const top = 8;
-    const bottom = 128;
-    const segH = 7;
+    const cy = o.y + o.h / 2;
+    const amp = Math.max(2, Math.min(6, (o.h - 6) / 2));
+    const left = 10;
+    const right = 110;
+    const segW = 6;
 
-    for (let y = top; y < bottom; y += segH) {
-      const t = (y - top) / (bottom - top);
-      const dx = Math.sin(t * Math.PI * 2.4) * amp;
-      const shade = Math.floor((y - top) / segH) % 2 === 0 ? bodyA : bodyB;
-      rectsAt(ctx, cx + dx - 4, y, [[0, 0, 8, segH, shade]]);
+    for (let x = left; x < right; x += segW) {
+      const t = (x - left) / (right - left);
+      const dy = Math.sin(t * Math.PI * 2.4) * amp;
+      const shade = Math.floor((x - left) / segW) % 2 === 0 ? bodyA : bodyB;
+      rectsAt(ctx, x, cy + dy - 4, [[0, 0, segW, 8, shade]]);
     }
 
-    const headDx = Math.sin(0) * amp;
-    rectsAt(ctx, cx + headDx - 5, top - 6, [
-      [0, 0, 10, 8, bodyA],
+    rectsAt(ctx, left - 6, cy - 5, [
+      [0, 0, 8, 10, bodyA],
       [2, 2, 2, 2, eyeColor],
-      [6, 2, 2, 2, eyeColor],
+      [2, 6, 2, 2, eyeColor],
     ]);
 
-    const tailT = (bottom - segH - top) / (bottom - top);
-    const tailDx = Math.sin(tailT * Math.PI * 2.4) * amp;
-    rectsAt(ctx, cx + tailDx - 3, bottom - 2, [
-      [0, 0, 6, 3, rattleColor],
-      [1, 3, 4, 3, rattleColor],
-      [0, 6, 6, 2, rattleColor],
+    const tailT = (right - segW - left) / (right - left);
+    const tailDy = Math.sin(tailT * Math.PI * 2.4) * amp;
+    rectsAt(ctx, right - 2, cy + tailDy - 3, [
+      [0, 0, 3, 6, rattleColor],
+      [3, 1, 3, 4, rattleColor],
+      [6, 0, 2, 6, rattleColor],
     ]);
   }
 
-  // Rock hitbox is the same full-height vertical bar; drawn as a scatter of
-  // individually shaped rocks (varying size) instead of one gray slab.
+  // Rock hitbox is the same full-width band; drawn as a scatter of individually
+  // shaped rocks (varying size) instead of one gray slab.
   function drawRock(cx, cy, size) {
     const r = size;
     const left = cx - r / 2;
@@ -239,29 +243,29 @@ const RoadGame = (() => {
 
   function drawBoulder(o) {
     const rocks = [
-      { cyFrac: 0.08, size: 13 },
-      { cyFrac: 0.27, size: 20 },
-      { cyFrac: 0.5, size: 15 },
-      { cyFrac: 0.71, size: 22 },
-      { cyFrac: 0.92, size: 14 },
+      { cxFrac: 0.07, size: 13 },
+      { cxFrac: 0.27, size: 20 },
+      { cxFrac: 0.5, size: 15 },
+      { cxFrac: 0.72, size: 22 },
+      { cxFrac: 0.93, size: 14 },
     ];
     rocks.forEach((spec, i) => {
-      const cx = o.x + o.w / 2 + (i % 2 === 0 ? -3 : 3);
-      const cy = 4 + spec.cyFrac * 136;
+      const cx = 4 + spec.cxFrac * (ROAD_W - 8);
+      const cy = o.y + o.h / 2 + (i % 2 === 0 ? -3 : 3);
       drawRock(cx, cy, spec.size);
     });
   }
 
   function drawBullet(b) {
     rectsAt(ctx, b.x, b.y, [
-      [0, 0, 5, 2, '#f2ead2'],
-      [0, 0, 2, 2, '#e8b800'],
+      [0, 0, 2, 5, '#f2ead2'],
+      [0, 3, 2, 2, '#e8b800'],
     ]);
   }
 
   function drawPlayer() {
-    const x = ROAD_PLAYER_X;
-    const y = player.y - (player.jumping ? 10 : 0);
+    const x = player.x;
+    const y = ROAD_PLAYER_Y - (player.jumping ? 10 : 0);
     const HAT_CROWN = '#8a5a4a';
     const HAT_BRIM = '#5a3a3a';
     const HAT_BAND = '#2f4f7a';
@@ -285,6 +289,7 @@ const RoadGame = (() => {
       [3, 5, 2, 1, HAT_BRIM],
       [5, 5, 6, 1, SKIN],
       [11, 5, 2, 1, HAT_BRIM],
+      [7, 5, 1, 1, EYE],
       [9, 5, 1, 1, EYE],
       [3, 6, 2, 1, HAT_BRIM],
       [5, 6, 6, 1, SKIN],
@@ -299,7 +304,7 @@ const RoadGame = (() => {
 
     if (player.jumping) {
       ctx.fillStyle = 'rgba(0,0,0,0.25)';
-      ctx.fillRect(x + 3, ROAD_LANES[player.lane] + 12, 10, 3);
+      ctx.fillRect(x + 3, ROAD_PLAYER_Y + 13, 10, 3);
     }
   }
 

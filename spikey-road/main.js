@@ -113,26 +113,14 @@
   });
 
   // Touch controls (touch devices only; desktop uses the keyboard).
-  //   tap the road above / below the player -> change lane
-  //   shoot bar down the right side           -> shoot
-  //   jump bar under the road                 -> jump
+  //   swipe left / right -> move one lane
+  //   swipe up           -> jump
+  //   tap                -> shoot
   const root = document.getElementById('game-root');
   const hint = document.getElementById('touch-hint');
-  const jumpBar = document.getElementById('jump-bar');
-  const shootBar = document.getElementById('shoot-bar');
   const HINT_KEY = 'spikey-road-hint-seen';
   const TOUCH = window.matchMedia('(pointer: coarse)').matches;
-
-  // Lane the tap landed in, picked from where the tap fell on the 144px-tall road.
-  function tappedLane(clientY) {
-    const rect = root.getBoundingClientRect();
-    const y = ((clientY - rect.top) / rect.height) * 144;
-    let nearest = 0;
-    ROAD_LANES.forEach((laneY, i) => {
-      if (Math.abs(laneY + 8 - y) < Math.abs(ROAD_LANES[nearest] + 8 - y)) nearest = i;
-    });
-    return nearest;
-  }
+  const SWIPE_PX = 24;
 
   function hintSeen() {
     try { return localStorage.getItem(HINT_KEY) === '1'; } catch (e) { return false; }
@@ -147,30 +135,41 @@
   if (TOUCH) {
     document.body.classList.add('touch');
 
-    // Anywhere on the road except the shoot bar: tap above / below the player to move.
+    // A swipe fires the moment the finger has travelled SWIPE_PX, so it feels
+    // instant, and each touch gives at most one gesture (one swipe = one lane).
+    // A touch that never travels that far is a tap (shoot) on release.
+    let touch = null;
+
     root.addEventListener('pointerdown', (e) => {
-      if (e.target.closest('#shoot-bar')) return;
       if (state !== 'playing') return;
       e.preventDefault();
       dismissHint();
-      const lane = tappedLane(e.clientY);
-      const current = GAME.getLane();
-      if (lane !== current) GAME.setLane(lane < current ? -1 : 1);
+      touch = { id: e.pointerId, x: e.clientX, y: e.clientY, moved: false };
+      if (root.setPointerCapture) root.setPointerCapture(e.pointerId);
     });
 
-    shootBar.addEventListener('pointerdown', (e) => {
-      e.preventDefault();
-      if (state !== 'playing') return;
-      dismissHint();
-      GAME.shoot();
+    root.addEventListener('pointermove', (e) => {
+      if (!touch || touch.moved || e.pointerId !== touch.id || state !== 'playing') return;
+      const dx = e.clientX - touch.x;
+      const dy = e.clientY - touch.y;
+      if (Math.abs(dx) >= SWIPE_PX && Math.abs(dx) > Math.abs(dy)) {
+        GAME.setLane(dx < 0 ? -1 : 1);
+      } else if (dy <= -SWIPE_PX && Math.abs(dy) > Math.abs(dx)) {
+        GAME.jump();
+      } else if (Math.hypot(dx, dy) < SWIPE_PX) {
+        return; // still just a touch; wait to see if it becomes a swipe
+      }
+      touch.moved = true; // any drag (including swipe down) is not a tap
     });
 
-    jumpBar.addEventListener('pointerdown', (e) => {
-      e.preventDefault();
-      if (state !== 'playing') return;
-      dismissHint();
-      GAME.jump();
+    root.addEventListener('pointerup', (e) => {
+      if (!touch || e.pointerId !== touch.id) return;
+      const wasTap = !touch.moved;
+      touch = null;
+      if (wasTap && state === 'playing') GAME.shoot();
     });
+
+    root.addEventListener('pointercancel', () => { touch = null; });
 
     // First run only: show the hint over the road once the game starts.
     button.addEventListener('click', () => {

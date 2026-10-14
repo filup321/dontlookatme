@@ -29,11 +29,43 @@ const RoadGame = (() => {
   let rafId = null;
   let lastTs = 0;
 
-  let player, obstacles, bullets, distance, speed, spawnTimer, nextSpawnAt;
+  let player, obstacles, bullets, distance, speed, spawnTimer, nextSpawnAt, snakeCount;
+
+  // First-encounter tips: the first time each kind of obstacle approaches, a
+  // short instruction is flashed. Which kinds were already shown is owned by the
+  // caller (so it can be remembered between visits).
+  let tipConfig = { seen: {}, text: {}, onSeen: () => {} };
+  let currentTip = null; // { obstacle, text }
+
+  function setTips(config) {
+    tipConfig = Object.assign({ seen: {}, text: {}, onSeen: () => {} }, config);
+  }
+
+  // The canvas is ROAD_SCALE times denser than the logical 120x176 road, so the
+  // detailed snake art stays sharp. All game code keeps using logical units.
+  const ROAD_SCALE = 3;
+  const SPRITES = {};
+
+  function loadSprite(key, src) {
+    const img = new Image();
+    img.src = src;
+    SPRITES[key] = img;
+  }
+
+  function sprite(key) {
+    const img = SPRITES[key];
+    return img && img.complete && img.naturalWidth ? img : null;
+  }
 
   function init(canvasEl) {
+    canvasEl.width = ROAD_W * ROAD_SCALE;
+    canvasEl.height = ROAD_H * ROAD_SCALE;
     ctx = canvasEl.getContext('2d');
+    ctx.setTransform(ROAD_SCALE, 0, 0, ROAD_SCALE, 0, 0);
     ctx.imageSmoothingEnabled = false;
+    loadSprite('snake', 'assets/rattlesnake.png');
+    loadSprite('snakeDead', 'assets/rattlesnake-dead.png');
+    loadSprite('rocks', 'assets/rocks-row.png');
     window.addEventListener('keydown', handleKeydown);
   }
 
@@ -43,6 +75,8 @@ const RoadGame = (() => {
     player = { lane: 1, x: ROAD_LANES[1] - 8, jumping: false, jumpUntil: 0 };
     obstacles = [];
     bullets = [];
+    currentTip = null;
+    snakeCount = 0;
     distance = 0;
     speed = 70;
     spawnTimer = 0;
@@ -93,7 +127,7 @@ const RoadGame = (() => {
     if (roll < 0.4) {
       obstacles.push({ type: 'cactus', y: -30, lane: Math.floor(Math.random() * ROAD_LANES.length), h: 24 });
     } else if (roll < 0.7) {
-      obstacles.push({ type: 'snake', y: -30, h: 20, dead: false });
+      obstacles.push({ type: 'snake', y: -30, h: 24, dead: false, facingLeft: snakeCount++ % 2 === 1 });
     } else {
       obstacles.push({ type: 'boulder', y: -30, h: 22 });
     }
@@ -126,6 +160,8 @@ const RoadGame = (() => {
     });
     bullets = bullets.filter((b) => !b.spent && b.y > -10);
 
+    updateTip();
+
     let hit = false;
     obstacles.forEach((o) => {
       if (o.resolved) return;
@@ -154,6 +190,51 @@ const RoadGame = (() => {
       stop();
       onWin();
     }
+  }
+
+  // Which way to dodge a cactus standing in the player's lane.
+  function dodgeText(o) {
+    return o.lane === ROAD_LANES.length - 1 ? tipConfig.text.cactusLeft : tipConfig.text.cactusRight;
+  }
+
+  function tipStillNeeded(o) {
+    if (o.resolved || o.y > ROAD_PLAYER_Y - 28) return false;
+    if (o.type === 'cactus') return o.lane === player.lane;
+    if (o.type === 'snake') return !o.dead;
+    return !player.jumping;
+  }
+
+  function updateTip() {
+    if (currentTip) {
+      if (!tipStillNeeded(currentTip.obstacle)) currentTip = null;
+      else if (currentTip.obstacle.type === 'cactus') currentTip.text = dodgeText(currentTip.obstacle);
+      return;
+    }
+    const o = obstacles.find((ob) => !tipConfig.seen[ob.type] && !ob.resolved
+      && ob.y >= 10 && ob.y < ROAD_PLAYER_Y - 28
+      && (ob.type !== 'cactus' || ob.lane === player.lane));
+    if (!o) return;
+    tipConfig.seen[o.type] = true;
+    tipConfig.onSeen(o.type);
+    const text = o.type === 'cactus' ? dodgeText(o) : tipConfig.text[o.type];
+    if (text) currentTip = { obstacle: o, text };
+  }
+
+  function drawTip() {
+    if (!currentTip) return;
+    const pulse = 0.85 + 0.15 * Math.sin(performance.now() / 120);
+    ctx.save();
+    ctx.globalAlpha = pulse;
+    ctx.font = 'bold 9px monospace';
+    ctx.textAlign = 'center';
+    const w = Math.min(ROAD_W - 8, ctx.measureText(currentTip.text).width + 14);
+    ctx.fillStyle = '#1a1a1a';
+    ctx.fillRect(ROAD_W / 2 - w / 2 - 1, 107, w + 2, 18);
+    ctx.fillStyle = '#f8f4e3';
+    ctx.fillRect(ROAD_W / 2 - w / 2, 108, w, 16);
+    ctx.fillStyle = '#c1502e';
+    ctx.fillText(currentTip.text, ROAD_W / 2, 119);
+    ctx.restore();
   }
 
   function drawRoad() {
@@ -188,72 +269,30 @@ const RoadGame = (() => {
     ]);
   }
 
-  // Snake's hitbox spans the full road width (o.y..o.y+o.h); the body winds up
-  // and down within it via a sine offset, head at the left with eyes, rattle at
-  // the tail on the right.
+  // Both obstacles are pixel-art sprites. The snake is drawn facing right, or
+  // mirrored to face left (they alternate); a shot snake is greyed out.
   function drawSnake(o) {
-    const bodyA = o.dead ? '#5a6a4a' : '#4f8a3a';
-    const bodyB = o.dead ? '#455a3c' : '#376b28';
-    const eyeColor = '#1a1a1a';
-    const rattleColor = o.dead ? '#7a6a5a' : '#c9a86a';
-    const cy = o.y + o.h / 2;
-    const amp = Math.max(2, Math.min(6, (o.h - 6) / 2));
-    const left = 10;
-    const right = 110;
-    const segW = 6;
-
-    for (let x = left; x < right; x += segW) {
-      const t = (x - left) / (right - left);
-      const dy = Math.sin(t * Math.PI * 2.4) * amp;
-      const shade = Math.floor((x - left) / segW) % 2 === 0 ? bodyA : bodyB;
-      rectsAt(ctx, x, cy + dy - 4, [[0, 0, segW, 8, shade]]);
+    const img = sprite(o.dead ? 'snakeDead' : 'snake');
+    if (!img) return;
+    const w = img.naturalWidth / ROAD_SCALE;
+    const h = img.naturalHeight / ROAD_SCALE;
+    const x = (ROAD_W - w) / 2;
+    const y = o.y + (o.h - h) / 2;
+    ctx.save();
+    if (o.facingLeft) {
+      ctx.translate(ROAD_W, 0);
+      ctx.scale(-1, 1);
     }
-
-    rectsAt(ctx, left - 6, cy - 5, [
-      [0, 0, 8, 10, bodyA],
-      [2, 2, 2, 2, eyeColor],
-      [2, 6, 2, 2, eyeColor],
-    ]);
-
-    const tailT = (right - segW - left) / (right - left);
-    const tailDy = Math.sin(tailT * Math.PI * 2.4) * amp;
-    rectsAt(ctx, right - 2, cy + tailDy - 3, [
-      [0, 0, 3, 6, rattleColor],
-      [3, 1, 3, 4, rattleColor],
-      [6, 0, 2, 6, rattleColor],
-    ]);
+    ctx.drawImage(img, x, y, w, h);
+    ctx.restore();
   }
 
-  // Rock hitbox is the same full-width band; drawn as a scatter of individually
-  // shaped rocks (varying size) instead of one gray slab.
-  function drawRock(cx, cy, size) {
-    const r = size;
-    const left = cx - r / 2;
-    const top = cy - r / 2;
-    rectsAt(ctx, left, top, [
-      [r * 0.3, 0, r * 0.4, r * 0.2, '#87867e'],
-      [r * 0.1, r * 0.15, r * 0.8, r * 0.2, '#87867e'],
-      [0, r * 0.3, r, r * 0.4, '#87867e'],
-      [r * 0.1, r * 0.65, r * 0.8, r * 0.2, '#87867e'],
-      [r * 0.3, r * 0.8, r * 0.4, r * 0.2, '#87867e'],
-      [r * 0.15, r * 0.15, r * 0.35, r * 0.28, '#a8a79c'],
-      [r * 0.5, r * 0.48, r * 0.35, r * 0.32, '#575651'],
-    ]);
-  }
-
+  // A row of rocks of different sizes with shrubs between them, spanning the road.
   function drawBoulder(o) {
-    const rocks = [
-      { cxFrac: 0.07, size: 13 },
-      { cxFrac: 0.27, size: 20 },
-      { cxFrac: 0.5, size: 15 },
-      { cxFrac: 0.72, size: 22 },
-      { cxFrac: 0.93, size: 14 },
-    ];
-    rocks.forEach((spec, i) => {
-      const cx = 4 + spec.cxFrac * (ROAD_W - 8);
-      const cy = o.y + o.h / 2 + (i % 2 === 0 ? -3 : 3);
-      drawRock(cx, cy, spec.size);
-    });
+    const img = sprite('rocks');
+    if (!img) return;
+    const h = img.naturalHeight * (ROAD_W / img.naturalWidth);
+    ctx.drawImage(img, 0, o.y + (o.h - h) / 2, ROAD_W, h);
   }
 
   function drawBullet(b) {
@@ -328,6 +367,7 @@ const RoadGame = (() => {
     bullets.forEach(drawBullet);
     drawPlayer();
     drawProgress();
+    drawTip();
   }
 
   function loop(ts) {
@@ -359,5 +399,5 @@ const RoadGame = (() => {
 
   function getLane() { return player ? player.lane : 1; }
 
-  return { init, start, stop, setLane, jump, shoot, pause, resume, getDistance, getLane };
+  return { init, start, stop, setLane, jump, shoot, pause, resume, getDistance, getLane, setTips };
 })();

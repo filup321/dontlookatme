@@ -177,6 +177,22 @@
     });
   }
 
+  // First-encounter tips (flashed the first time each obstacle type approaches).
+  const TIPS_KEY = 'spikey-road-tips-seen';
+  function loadTips() {
+    try { return JSON.parse(localStorage.getItem(TIPS_KEY)) || {}; } catch (e) { return {}; }
+  }
+  const tipsSeenState = loadTips();
+  GAME.setTips({
+    seen: tipsSeenState,
+    onSeen: () => {
+      try { localStorage.setItem(TIPS_KEY, JSON.stringify(tipsSeenState)); } catch (e) { /* storage unavailable */ }
+    },
+    text: TOUCH
+      ? { cactusRight: 'swipe right', cactusLeft: 'swipe left', snake: 'tap', boulder: 'swipe up' }
+      : { cactusRight: 'press \u2192 or D', cactusLeft: 'press \u2190 or A', snake: 'press F', boulder: 'press \u2191 or Space' },
+  });
+
   GAME.init(canvas);
   showOverlay('Road to Veracruz', '', INTRO_LINES, 'vamos', true);
 })();

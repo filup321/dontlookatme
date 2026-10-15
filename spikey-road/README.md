@@ -21,7 +21,7 @@ The road scrolls down the screen and your character stays at the bottom.
 | Shoot | F or Z | tap |
 | Pause | P | |
 
-Touch controls appear automatically on phones and tablets. A hint is shown on the first play.
+Touch controls appear automatically on phones and tablets. A hint is shown on the first play, and each obstacle shows a short instruction the first time it appears (add `?tips` to the page address to see them again).
 
 ## Run locally
 ```bash

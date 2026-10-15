@@ -178,19 +178,23 @@
   }
 
   // First-encounter tips (flashed the first time each obstacle type approaches).
+  // Add ?tips to the page address to replay them.
   const TIPS_KEY = 'spikey-road-tips-seen';
+  const REPLAY_TIPS = /[?&]tips\b/.test(window.location.search);
   function loadTips() {
+    if (REPLAY_TIPS) return {};
     try { return JSON.parse(localStorage.getItem(TIPS_KEY)) || {}; } catch (e) { return {}; }
   }
   const tipsSeenState = loadTips();
   GAME.setTips({
     seen: tipsSeenState,
     onSeen: () => {
+      if (REPLAY_TIPS) return;
       try { localStorage.setItem(TIPS_KEY, JSON.stringify(tipsSeenState)); } catch (e) { /* storage unavailable */ }
     },
     text: TOUCH
-      ? { cactusRight: 'swipe right', cactusLeft: 'swipe left', snake: 'tap', boulder: 'swipe up' }
-      : { cactusRight: 'press \u2192 or D', cactusLeft: 'press \u2190 or A', snake: 'press F', boulder: 'press \u2191 or Space' },
+      ? { cactus: 'swipe right or left', snake: 'tap', boulder: 'swipe up' }
+      : { cactus: 'press \u2190 / \u2192 or A / D', snake: 'press F', boulder: 'press \u2191 or Space' },
   });
 
   GAME.init(canvas);

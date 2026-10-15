@@ -69,6 +69,7 @@ const RoadGame = (() => {
     loadSprite('snake', 'assets/rattlesnake.png');
     loadSprite('snakeDead', 'assets/rattlesnake-dead.png');
     loadSprite('rocks', 'assets/rocks-row.png');
+    loadSprite('cactus', 'assets/cactus-obstacle.png');
     loadSprite('road', 'assets/road-bg.png');
     window.addEventListener('keydown', handleKeydown);
   }
@@ -129,7 +130,7 @@ const RoadGame = (() => {
   function spawnObstacle() {
     const roll = Math.random();
     if (roll < 0.4) {
-      obstacles.push({ type: 'cactus', y: -30, lane: Math.floor(Math.random() * ROAD_LANES.length), h: 24 });
+      obstacles.push({ type: 'cactus', y: -34, lane: Math.floor(Math.random() * ROAD_LANES.length), h: 29 });
     } else if (roll < 0.7) {
       obstacles.push({ type: 'snake', y: -30, h: 24, dead: false, facingLeft: snakeCount++ % 2 === 1 });
     } else {
@@ -196,11 +197,6 @@ const RoadGame = (() => {
     }
   }
 
-  // Which way to dodge a cactus standing in the player's lane.
-  function dodgeText(o) {
-    return o.lane === ROAD_LANES.length - 1 ? tipConfig.text.cactusLeft : tipConfig.text.cactusRight;
-  }
-
   function tipStillNeeded(o) {
     if (o.resolved || o.y > ROAD_PLAYER_Y - 28) return false;
     if (o.type === 'cactus') return o.lane === player.lane;
@@ -211,7 +207,6 @@ const RoadGame = (() => {
   function updateTip() {
     if (currentTip) {
       if (!tipStillNeeded(currentTip.obstacle)) currentTip = null;
-      else if (currentTip.obstacle.type === 'cactus') currentTip.text = dodgeText(currentTip.obstacle);
       return;
     }
     const o = obstacles.find((ob) => !tipConfig.seen[ob.type] && !ob.resolved
@@ -220,7 +215,7 @@ const RoadGame = (() => {
     if (!o) return;
     tipConfig.seen[o.type] = true;
     tipConfig.onSeen(o.type);
-    const text = o.type === 'cactus' ? dodgeText(o) : tipConfig.text[o.type];
+    const text = tipConfig.text[o.type];
     if (text) currentTip = { obstacle: o, text };
   }
 
@@ -274,19 +269,16 @@ const RoadGame = (() => {
     ctx.drawImage(pick(n + 1), 0, pos - tileH, ROAD_W, tileH);
   }
 
+  // The cactus stands in its lane, centred on the lane's x.
   function drawCactus(o) {
-    const x = ROAD_LANES[o.lane] - 7;
-    rectsAt(ctx, x, o.y, [
-      [4, 4, 6, 20, '#3a6a2a'],
-      [0, 8, 4, 4, '#3a6a2a'],
-      [0, 4, 4, 4, '#3a6a2a'],
-      [10, 12, 4, 4, '#3a6a2a'],
-      [10, 8, 4, 4, '#3a6a2a'],
-      [5, 3, 4, 1, '#4f8a3a'],
-    ]);
+    const img = sprite('cactus');
+    if (!img) return;
+    const w = img.naturalWidth * ART_PX / ROAD_SCALE;
+    const h = img.naturalHeight * ART_PX / ROAD_SCALE;
+    ctx.drawImage(img, ROAD_LANES[o.lane] - w / 2, o.y + (o.h - h) / 2, w, h);
   }
 
-  // Both obstacles are pixel-art sprites. The snake is drawn facing right, or
+  // The cactus, snake and rocks are pixel-art sprites. The snake is drawn facing right, or
   // mirrored to face left (they alternate); a shot snake is greyed out.
   function drawSnake(o) {
     const img = sprite(o.dead ? 'snakeDead' : 'snake');

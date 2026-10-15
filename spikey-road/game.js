@@ -22,9 +22,9 @@ const ROAD_JUMP_MS = 500;
 // The run never ends by distance; it speeds up in steps as you pass milestones.
 // Score is shown in metres: 1 m = 10 distance units.
 const ROAD_START_SPEED = 70;   // units per second at the start
-const ROAD_SPEED_STEP = 6;     // added to the speed at every milestone
+const ROAD_SPEED_STEP = 10;    // added to the speed at every milestone (no top speed)
 const ROAD_MILESTONE_M = 100;  // a milestone every this many metres
-const ROAD_MAX_SPEED = 140;    // the speed never goes above this
+const ROAD_QUIET_STEPS = 2;    // the first this-many speed-ups happen without a "Faster!" banner
 const ROAD_GAP_MIN = 60;       // gap between obstacles, in distance units (min)
 const ROAD_GAP_MAX = 95;       // ... and max
 const ROAD_MIN_GAP_MS = 600;   // never spawn closer together in time than this
@@ -159,7 +159,7 @@ const RoadGame = (() => {
 
   function targetSpeed() {
     const steps = Math.floor(metres() / ROAD_MILESTONE_M);
-    return Math.min(ROAD_MAX_SPEED, ROAD_START_SPEED + ROAD_SPEED_STEP * steps);
+    return ROAD_START_SPEED + ROAD_SPEED_STEP * steps;
   }
 
   function showBanner(text, sub) {
@@ -173,7 +173,8 @@ const RoadGame = (() => {
     const reached = Math.floor(metres() / ROAD_MILESTONE_M);
     if (reached > milestone) {
       milestone = reached;
-      showBanner(metres() + ' m', 'Faster!');
+      // The first ROAD_QUIET_STEPS speed-ups are silent; after that each one says "Faster!".
+      if (milestone > ROAD_QUIET_STEPS) showBanner(metres() + ' m', 'Faster!');
     }
     if (!storyShown && metres() >= ROAD_STORY_M) {
       storyShown = true;

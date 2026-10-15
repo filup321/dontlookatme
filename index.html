@@ -981,19 +981,23 @@
     const playerEl = document.getElementById("leaderboard-player");
 
     await appState.pendingSubmit.catch(() => {});
-    const results = await Promise.all(Object.values(MODES).map(m => getTopScore(m.name)));
+    // One row per memory mode, then a last row for the Road to Veracruz game
+    // (its scores are stored in the same database under "veracruz", in metres).
+    const rows = Object.values(MODES).map(m => ({ key: m.name, label: m.label, unit: "" }));
+    rows.push({ key: "veracruz", label: "Road to Veracruz", unit: " m" });
+    const results = await Promise.all(rows.map(r => getTopScore(r.key)));
     if (request !== leaderboardRequest) return; // a newer render superseded this one
 
     list.innerHTML = "";
-    Object.values(MODES).forEach((mode, i) => {
+    rows.forEach((row, i) => {
       const entry = results[i].entry;
       const li = document.createElement("li");
       const label = document.createElement("span");
       label.className = "lb-mode";
-      label.textContent = mode.label;
+      label.textContent = row.label;
       const value = document.createElement("span");
       value.className = "lb-entry" + (entry ? "" : " empty");
-      value.textContent = entry ? `${entry.name} | ${entry.streak}` : "-";
+      value.textContent = entry ? `${entry.name} | ${entry.streak}${row.unit}` : "-";
       li.append(label, value);
       list.appendChild(li);
     });

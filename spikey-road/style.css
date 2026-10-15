@@ -146,3 +146,20 @@ body.touch #game-root { touch-action: none; }
 .overlay.intro .pixel-btn { margin-top: 0.6em; }
 
 body.touch .overlay.intro .keys { display: none; }
+
+/* Leaderboard name field and status line on the game-over card. */
+#name-row { margin: 6px 0; }
+#name-row label { display: block; margin-bottom: 4px; font-size: 0.9em; }
+.name-fields { display: flex; gap: 6px; justify-content: center; }
+.name-fields input {
+  flex: 1;
+  min-width: 0;
+  max-width: 14em;
+  padding: 4px 6px;
+  font-family: inherit;
+  font-size: 16px; /* 16px stops iPhone Safari zooming into the field */
+  border: 2px solid #1a1a1a;
+  background: #fff;
+  color: #1a1a1a;
+}
+.lb-status { min-height: 1.4em; font-size: 0.85em; margin: 2px 0 6px; }

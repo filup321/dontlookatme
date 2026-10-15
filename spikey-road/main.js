@@ -21,6 +21,10 @@
   const bodyEl = document.getElementById('overlay-body');
   const bestEl = document.getElementById('overlay-best');
   const button = document.getElementById('overlay-button');
+  const nameRow = document.getElementById('name-row');
+  const nameInput = document.getElementById('name-input');
+  const nameSave = document.getElementById('name-save');
+  const lbStatus = document.getElementById('lb-status');
 
   let state = 'title'; // 'title' | 'playing' | 'paused' | 'over'
 
@@ -36,6 +40,8 @@
   // intro: true gives the white instructions-screen look; false is the plain card.
   function showOverlay(title, sub, lines, buttonLabel, intro) {
     overlay.classList.toggle('intro', !!intro);
+    nameRow.classList.add('hidden');
+    lbStatus.textContent = '';
     titleEl.textContent = title;
     subEl.textContent = sub;
     bodyEl.innerHTML = '';
@@ -59,6 +65,17 @@
     button.focus();
   }
 
+  const STATUS_TEXT = {
+    saved: 'Added to the leaderboard!',
+    'not-better': 'Your best on the leaderboard is higher.',
+    failed: "Couldn't reach the leaderboard.",
+  };
+
+  async function sendScore(name, score) {
+    lbStatus.textContent = 'Sending to the leaderboard...';
+    lbStatus.textContent = STATUS_TEXT[await Leaderboard.submit(name, score)];
+  }
+
   function finish(reason) {
     state = 'over';
     const score = GAME.getScore();
@@ -70,6 +87,24 @@
       ['You travelled ' + score + ' m.', newBest && score > 0 ? 'New best!' : ''].filter(Boolean),
       'try again'
     );
+    if (!newBest || score <= 0) return;
+
+    // A new personal best goes to the shared leaderboard (needs a player name).
+    const name = Leaderboard.getName();
+    if (name) {
+      sendScore(name, score);
+    } else {
+      nameInput.value = '';
+      nameRow.classList.remove('hidden');
+      nameSave.onclick = () => {
+        const chosen = Leaderboard.cleanName(nameInput.value);
+        if (!chosen) { nameInput.focus(); return; }
+        Leaderboard.setName(chosen);
+        nameRow.classList.add('hidden');
+        sendScore(chosen, score);
+      };
+      nameInput.onkeydown = (e) => { if (e.key === 'Enter') nameSave.onclick(); };
+    }
   }
 
   function begin() {

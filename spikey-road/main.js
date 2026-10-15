@@ -69,6 +69,7 @@
     saved: 'Added to the leaderboard!',
     'not-better': 'Your best on the leaderboard is higher.',
     failed: "Couldn't reach the leaderboard.",
+    denied: 'The leaderboard refused the score (its rules may need updating).',
   };
 
   async function sendScore(name, score) {
@@ -87,9 +88,10 @@
       ['You travelled ' + score + ' m.', newBest && score > 0 ? 'New best!' : ''].filter(Boolean),
       'try again'
     );
-    if (!newBest || score <= 0) return;
+    if (score <= 0) return;
 
-    // A new personal best goes to the shared leaderboard (needs a player name).
+    // Every run is offered to the shared leaderboard (it only keeps a player's best,
+    // so this does not depend on the best saved on this device). Needs a player name.
     const name = Leaderboard.getName();
     if (name) {
       sendScore(name, score);

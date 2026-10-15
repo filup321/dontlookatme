@@ -42,7 +42,7 @@ const Leaderboard = (() => {
   }
 
   // Saves metres as this player's score if it beats their saved best.
-  // Resolves to 'saved', 'not-better' or 'failed'.
+  // Resolves to 'saved', 'not-better', 'denied' (refused by the database rules) or 'failed'.
   async function submit(name, metres) {
     if (!name || metres <= 0) return 'failed';
     try {
@@ -57,7 +57,8 @@ const Leaderboard = (() => {
       return 'saved';
     } catch (e) {
       console.warn("Couldn't save the score online.", e);
-      return 'failed';
+      // 401/403 means the database's rules refused the write (e.g. not yet updated).
+      return /HTTP 40[13]/.test(String(e && e.message)) ? 'denied' : 'failed';
     }
   }
 

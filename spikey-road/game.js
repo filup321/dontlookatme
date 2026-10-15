@@ -16,10 +16,19 @@ const ROAD_W = 120;
 const ROAD_H = 176;
 const ROAD_LANES = [34, 60, 86]; // lane centres (x), all on the dirt track
 const ROAD_PLAYER_Y = 148;
-const ROAD_WIN_DISTANCE = 2600;
-const ROAD_SPAWN_MIN = 650;
-const ROAD_SPAWN_MAX = 1050;
 const ROAD_JUMP_MS = 500;
+
+// ---- Tuning: change these to adjust how the run feels --------------------
+// The run never ends by distance; it speeds up in steps as you pass milestones.
+// Score is shown in metres: 1 m = 10 distance units.
+const ROAD_START_SPEED = 70;   // units per second at the start
+const ROAD_SPEED_STEP = 6;     // added to the speed at every milestone
+const ROAD_MILESTONE_M = 100;  // a milestone every this many metres
+const ROAD_MAX_SPEED = 140;    // the speed never goes above this
+const ROAD_GAP_MIN = 60;       // gap between obstacles, in distance units (min)
+const ROAD_GAP_MAX = 95;       // ... and max
+const ROAD_MIN_GAP_MS = 600;   // never spawn closer together in time than this
+const ROAD_STORY_M = 260;      // the old finish line, now just a banner
 
 const RoadGame = (() => {
   let ctx = null;
@@ -29,7 +38,11 @@ const RoadGame = (() => {
   let rafId = null;
   let lastTs = 0;
 
-  let player, obstacles, bullets, distance, speed, spawnTimer, nextSpawnAt, snakeCount;
+  let player, obstacles, bullets, distance, speed, spawnTimer, spawnDist, nextGap, snakeCount;
+  let milestone, banner, storyShown, bestMetres = 0;
+
+  // ?start=<metres> begins the run that far along (for testing later speeds).
+  const startMetres = Math.max(0, Number((/[?&]start=(\d+)/.exec(window.location.search) || [])[1]) || 0);
 
   // First-encounter tips: the first time each kind of obstacle approaches, a
   // short instruction is flashed. Which kinds were already shown is owned by the
@@ -82,10 +95,14 @@ const RoadGame = (() => {
     bullets = [];
     currentTip = null;
     snakeCount = 0;
-    distance = 0;
-    speed = 70;
+    distance = startMetres * 10;
+    milestone = Math.floor(startMetres / ROAD_MILESTONE_M);
+    speed = targetSpeed();
     spawnTimer = 0;
-    nextSpawnAt = randRange(ROAD_SPAWN_MIN, ROAD_SPAWN_MAX);
+    spawnDist = 0;
+    nextGap = randRange(ROAD_GAP_MIN, ROAD_GAP_MAX);
+    banner = null;
+    storyShown = startMetres >= ROAD_STORY_M;
     running = true;
     lastTs = performance.now();
     rafId = requestAnimationFrame(loop);
@@ -138,17 +155,43 @@ const RoadGame = (() => {
     }
   }
 
+  function metres() { return Math.floor(distance / 10); }
+
+  function targetSpeed() {
+    const steps = Math.floor(metres() / ROAD_MILESTONE_M);
+    return Math.min(ROAD_MAX_SPEED, ROAD_START_SPEED + ROAD_SPEED_STEP * steps);
+  }
+
+  function showBanner(text, sub) {
+    banner = { text, sub, until: performance.now() + 1900 };
+  }
+
   function update(dt) {
     distance += speed * dt;
-    speed = Math.min(150, 70 + distance / 40);
+
+    // Speed goes up in steps at each milestone, eased in over about a second.
+    const reached = Math.floor(metres() / ROAD_MILESTONE_M);
+    if (reached > milestone) {
+      milestone = reached;
+      showBanner(metres() + ' m', 'Faster!');
+    }
+    if (!storyShown && metres() >= ROAD_STORY_M) {
+      storyShown = true;
+      showBanner('Bienvenidos', 'a Veracruz');
+    }
+    speed += (targetSpeed() - speed) * Math.min(1, dt * 3);
 
     if (player.jumping && performance.now() > player.jumpUntil) player.jumping = false;
     player.x += (ROAD_LANES[player.lane] - 8 - player.x) * Math.min(1, dt * 12);
 
+    // Obstacles are spaced by distance, so the gaps look the same at any speed,
+    // but never closer together in time than ROAD_MIN_GAP_MS.
     spawnTimer += dt * 1000;
-    if (spawnTimer >= nextSpawnAt) {
+    spawnDist += speed * dt;
+    if (spawnDist >= nextGap && spawnTimer >= ROAD_MIN_GAP_MS) {
       spawnTimer = 0;
-      nextSpawnAt = randRange(ROAD_SPAWN_MIN, ROAD_SPAWN_MAX);
+      spawnDist = 0;
+      nextGap = randRange(ROAD_GAP_MIN, ROAD_GAP_MAX);
       spawnObstacle();
     }
 
@@ -191,10 +234,6 @@ const RoadGame = (() => {
       return;
     }
 
-    if (distance >= ROAD_WIN_DISTANCE) {
-      stop();
-      onWin();
-    }
   }
 
   function tipStillNeeded(o) {
@@ -357,14 +396,36 @@ const RoadGame = (() => {
     }
   }
 
-  function drawProgress() {
-    const pct = Math.min(1, distance / ROAD_WIN_DISTANCE);
+  // Score pill (top-left) and the milestone banner beneath it.
+  function drawHud() {
+    const score = metres() + ' m';
+    ctx.save();
+    ctx.font = 'bold 9px monospace';
+    ctx.textAlign = 'left';
+    const newBest = bestMetres > 0 && metres() > bestMetres;
+    const label = newBest ? score + '  NEW BEST' : score;
+    const w = ctx.measureText(label).width + 10;
     ctx.fillStyle = '#1a1a1a';
-    ctx.fillRect(4, 4, 60, 5);
+    ctx.fillRect(4, 4, w + 2, 15);
     ctx.fillStyle = '#f8f4e3';
-    ctx.fillRect(5, 5, 58, 3);
-    ctx.fillStyle = '#c1502e';
-    ctx.fillRect(5, 5, 58 * pct, 3);
+    ctx.fillRect(5, 5, w, 13);
+    ctx.fillStyle = newBest ? '#c1502e' : '#1a1a1a';
+    ctx.fillText(label, 10, 15);
+
+    if (banner && performance.now() < banner.until) {
+      const lines = banner.sub ? [banner.text, banner.sub] : [banner.text];
+      ctx.textAlign = 'center';
+      const bw = Math.min(ROAD_W - 8, Math.max(...lines.map((t) => ctx.measureText(t).width)) + 16);
+      const bh = lines.length * 11 + 6;
+      const by = 28;
+      ctx.fillStyle = '#1a1a1a';
+      ctx.fillRect(ROAD_W / 2 - bw / 2 - 1, by - 1, bw + 2, bh + 2);
+      ctx.fillStyle = '#f8f4e3';
+      ctx.fillRect(ROAD_W / 2 - bw / 2, by, bw, bh);
+      ctx.fillStyle = '#c1502e';
+      lines.forEach((t, i) => ctx.fillText(t, ROAD_W / 2, by + 12 + i * 11));
+    }
+    ctx.restore();
   }
 
   function draw() {
@@ -376,7 +437,7 @@ const RoadGame = (() => {
     });
     bullets.forEach(drawBullet);
     drawPlayer();
-    drawProgress();
+    drawHud();
     drawTip();
   }
 
@@ -407,7 +468,11 @@ const RoadGame = (() => {
 
   function getDistance() { return distance || 0; }
 
+  function getScore() { return distance ? metres() : 0; }
+
+  function setBest(m) { bestMetres = m || 0; }
+
   function getLane() { return player ? player.lane : 1; }
 
-  return { init, start, stop, setLane, jump, shoot, pause, resume, getDistance, getLane, setTips };
+  return { init, start, stop, setLane, jump, shoot, pause, resume, getDistance, getScore, getLane, setTips, setBest };
 })();

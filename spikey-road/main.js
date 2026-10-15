@@ -1,9 +1,8 @@
-// Game shell: title / win / lose overlay, touch controls, best score, pause.
+// Game shell: title / game-over overlay, touch controls, best score, pause.
 
 (function main() {
   const GAME = RoadGame;
-  const WIN_DISTANCE = ROAD_WIN_DISTANCE;
-  const BEST_KEY = 'spikey-road-best';
+  const BEST_KEY = 'spikey-road-best-m'; // best distance, in metres
   const INTRO_LINES = [
     'The journey to Veracruz is long and dangerous',
     '',
@@ -33,10 +32,6 @@
     try { localStorage.setItem(BEST_KEY, String(value)); } catch (e) { /* storage unavailable */ }
   }
 
-  function pct(distance) {
-    return Math.min(100, Math.floor((distance / WIN_DISTANCE) * 100));
-  }
-
   // lines: strings, or { text, icon } for a line with a picture after it.
   // intro: true gives the white instructions-screen look; false is the plain card.
   function showOverlay(title, sub, lines, buttonLabel, intro) {
@@ -58,27 +53,30 @@
       bodyEl.appendChild(p);
     });
     const best = loadBest();
-    bestEl.textContent = best ? 'best: ' + best + '%' : '';
+    bestEl.textContent = best ? 'best: ' + best + ' m' : '';
     button.textContent = buttonLabel;
     overlay.classList.remove('hidden');
     button.focus();
   }
 
-  function finish(won, reason) {
+  function finish(reason) {
     state = 'over';
-    const reached = won ? 100 : pct(GAME.getDistance());
-    if (reached > loadBest()) saveBest(reached);
-    if (won) {
-      showOverlay('Bienvenidos a Veracruz', 'You made it!', ['100% of the road travelled.'], 'play again');
-    } else {
-      showOverlay('Game over', LOSE_TEXT[reason] || LOSE_TEXT.default, ['You travelled ' + reached + '% of the road.'], 'try again');
-    }
+    const score = GAME.getScore();
+    const newBest = score > loadBest();
+    if (newBest) saveBest(score);
+    showOverlay(
+      'Game over',
+      LOSE_TEXT[reason] || LOSE_TEXT.default,
+      ['You travelled ' + score + ' m.', newBest && score > 0 ? 'New best!' : ''].filter(Boolean),
+      'try again'
+    );
   }
 
   function begin() {
     overlay.classList.add('hidden');
     state = 'playing';
-    GAME.start({ onWin: () => finish(true), onLose: (reason) => finish(false, reason) });
+    GAME.setBest(loadBest());
+    GAME.start({ onLose: (reason) => finish(reason) });
   }
 
   function togglePause() {

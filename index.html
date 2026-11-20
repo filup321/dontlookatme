@@ -422,9 +422,30 @@
     z-index: 60;
   }
 
-  .streak-bar.visible { display: block; }
+  .streak-bar.visible { display: flex; align-items: center; gap: 14px; white-space: nowrap; }
 
   #streak-count { color: var(--accent); }
+
+  /* Full Recall hint button, sits next to the streak counter */
+  .hint-btn, .reroll-btn {
+    display: none;
+    padding: 5px 14px;
+    font-size: 0.85rem;
+    border-radius: 999px;
+    background: transparent;
+    border: 2px solid #f6c343;
+    color: #f6c343;
+  }
+  .hint-btn.visible, .reroll-btn.visible { display: inline-block; }
+  .hint-btn:hover, .reroll-btn:hover { background: rgba(246,195,67,0.15); }
+  .hint-btn.active { background: #f6c343; color: #1b1e2b; }
+  .hint-btn:disabled, .reroll-btn:disabled { border-color: var(--muted); color: var(--muted); background: transparent; }
+
+  /* Hint mode: unlocked squares are clickable; a revealed square is locked */
+  .hinting .zone:not(.locked) { cursor: pointer; border-color: #f6c343; border-style: solid; }
+  .zone.locked { border-color: var(--correct); border-style: solid; }
+  .zone.locked > .tile { cursor: default; }
+  #arrange-detail.hint-prompt { color: #f6c343; font-weight: 600; }
 
   .game-widget {
     display: flex;
@@ -541,7 +562,7 @@
 
 </div>
 
-<div class="streak-bar" id="streak-bar">Streak: <span id="streak-count">0</span></div>
+<div class="streak-bar" id="streak-bar"><span>Streak: <span id="streak-count">0</span></span><button class="hint-btn" id="btn-hint">Hint (1)</button><button class="reroll-btn" id="btn-reroll">Re-roll (1)</button></div>
 
 <script>
 (function () {
@@ -985,6 +1006,8 @@
     question: null,
     lastRoundIndexByMode: {},
     leaderboardTab: "classic",
+    hintsLeft: 1,
+    rerollsLeft: 1,
     rafHandle: null,
     advanceTimeoutHandle: null,
     streak: 0,
@@ -1007,10 +1030,45 @@
     const streakBar = document.getElementById("streak-bar");
     streakBar.classList.toggle("visible", STREAK_VISIBLE_SCREENS.includes(id));
 
+    updateHintButton();
+    updateRerollButton();
+
     if (id === "screen-menu") {
       renderMenu(null);
       renderLeaderboard();
     }
+  }
+
+  // Classic mode: one re-roll per game swaps the asked position for a different one (button sits by the streak).
+  function updateRerollButton() {
+    const btn = document.getElementById("btn-reroll");
+    const show = appState.screen === "screen-question" && appState.mode && appState.mode.variant !== "fullrecall";
+    btn.classList.toggle("visible", !!show);
+    btn.textContent = `Re-roll (${appState.rerollsLeft})`;
+    btn.disabled = appState.rerollsLeft <= 0 || appState.answered;
+  }
+
+  function rerollQuestion() {
+    if (appState.rerollsLeft <= 0 || appState.answered || appState.screen !== "screen-question") return;
+    const others = appState.round.cells.filter(c => c !== appState.question);
+    if (!others.length) return;
+    appState.question = others[Math.floor(Math.random() * others.length)];
+    appState.rerollsLeft -= 1;
+    document.getElementById("question-text").textContent = positionLabel(appState.mode, appState.question);
+    const input = document.getElementById("answer-input");
+    input.value = "";
+    input.focus();
+    updateRerollButton();
+  }
+
+  // The Full Recall hint button lives in the streak bar and only shows on the arrange screen.
+  function updateHintButton() {
+    const btn = document.getElementById("btn-hint");
+    const show = appState.screen === "screen-arrange" && appState.mode && appState.mode.variant === "fullrecall";
+    btn.classList.toggle("visible", !!show);
+    btn.textContent = `Hint (${appState.hintsLeft})`;
+    btn.disabled = appState.hintsLeft <= 0 || (typeof arrange !== "undefined" && arrange.locked);
+    btn.classList.toggle("active", typeof arrange !== "undefined" && !!arrange.hintActive);
   }
 
   function updateStreakDisplay() {
@@ -1067,6 +1125,8 @@
   function openInstructions(mode) {
     appState.mode = mode;
     appState.streak = 0;
+    appState.hintsLeft = 1;
+    appState.rerollsLeft = 1;
     updateStreakDisplay();
     document.getElementById("instructions-mode-badge").textContent = mode.label;
     document.getElementById("instructions-text").textContent =
@@ -1252,7 +1312,7 @@
 
   // zones: one per grid square that held an item ({el, expectedId, item}); items: the draggable tiles
   // ({cell, id, el, slot, zone}). item.zone is the zone it sits in (or null while it is in the tray).
-  let arrange = { zones: [], items: [], locked: true };
+  let arrange = { zones: [], items: [], locked: true, hintActive: false };
 
   function shuffled(list) {
     const a = list.slice();
@@ -1298,7 +1358,8 @@
     grid.classList.toggle("dense", mode.rows * mode.cols > 9);
     grid.innerHTML = "";
 
-    arrange = { zones: [], items: [], locked: false };
+    arrange = { zones: [], items: [], locked: false, hintActive: false };
+    grid.classList.remove("hinting");
     const byPosition = new Map(round.cells.map(c => [c.r + "," + c.c, c]));
     for (let r = 0; r < mode.rows; r++) {
       for (let c = 0; c < mode.cols; c++) {
@@ -1306,7 +1367,9 @@
         const el = document.createElement("div");
         if (cell) {
           el.className = "cell zone";
-          arrange.zones.push({ el, expectedId: itemId(cell), item: null });
+          const zone = { el, expectedId: itemId(cell), item: null, locked: false };
+          el.addEventListener("click", () => onZoneClick(zone));
+          arrange.zones.push(zone);
         } else {
           el.className = "cell zone blank";
         }
@@ -1346,15 +1409,59 @@
     tray.style.setProperty("--per", String(Math.ceil(n / rows)));
   }
 
+  // ---- Hint: reveal (and lock) the correct tile in one square the player chooses ----
+
+  function onHintButton() {
+    if (arrange.locked || appState.hintsLeft <= 0) return;
+    arrange.hintActive = !arrange.hintActive;
+    const detail = document.getElementById("arrange-detail");
+    detail.textContent = arrange.hintActive ? "Choose one square to uncover" : "";
+    detail.classList.toggle("hint-prompt", arrange.hintActive);
+    document.getElementById("arrange-grid").classList.toggle("hinting", arrange.hintActive);
+    updateHintButton();
+  }
+
+  function onZoneClick(zone) {
+    if (!arrange.hintActive || arrange.locked || zone.locked || appState.hintsLeft <= 0) return;
+
+    // Pick a loose tile with the right identity (identical tiles are interchangeable); prefer one still in the tray.
+    const candidates = arrange.items.filter(it => it.id === zone.expectedId && !it.locked);
+    const item = candidates.find(it => !it.zone) || candidates[0];
+    if (!item) return;
+
+    const displaced = zone.item;
+    if (item.zone) item.zone.item = null;
+    zone.item = null;
+    if (displaced) displaced.zone = null;
+    attachToZone(item, zone);
+    if (displaced && displaced !== item) returnToTray(displaced);
+
+    item.locked = true;
+    zone.locked = true;
+    zone.el.classList.add("locked");
+
+    appState.hintsLeft -= 1;
+    arrange.hintActive = false;
+    const detail = document.getElementById("arrange-detail");
+    detail.textContent = "";
+    detail.classList.remove("hint-prompt");
+    document.getElementById("arrange-grid").classList.remove("hinting");
+    updateHintButton();
+    updateSubmitState();
+  }
+
   function zoneAt(x, y) {
     return arrange.zones.find(z => {
+      if (z.locked) return false;
       const r = z.el.getBoundingClientRect();
       return x >= r.left && x <= r.right && y >= r.top && y <= r.bottom;
     }) || null;
   }
 
   function onTilePointerDown(e, item) {
-    if (arrange.locked || (e.pointerType === "mouse" && e.button !== 0)) return;
+    if (arrange.locked || item.locked || (e.pointerType === "mouse" && e.button !== 0)) return;
+    // While choosing a hint square, a tap on a placed tile is a square choice, not a pick-up.
+    if (arrange.hintActive && item.zone) return;
     e.preventDefault();
     const startX = e.clientX, startY = e.clientY;
     const rect = item.el.getBoundingClientRect();
@@ -1430,6 +1537,8 @@
   function submitArrangement() {
     if (arrange.locked || !arrange.zones.every(z => z.item)) return;
     arrange.locked = true;
+    arrange.hintActive = false;
+    updateHintButton();
     document.getElementById("screen-arrange").classList.add("arrange-locked");
     document.getElementById("btn-submit-arrangement").style.display = "none";
 
@@ -1659,13 +1768,21 @@
     });
 
     document.getElementById("btn-submit-arrangement").addEventListener("click", submitArrangement);
-    document.getElementById("btn-arrange-again").addEventListener("click", () => startRound(appState.mode));
+    document.getElementById("btn-hint").addEventListener("click", onHintButton);
+    document.getElementById("btn-arrange-again").addEventListener("click", () => {
+      appState.hintsLeft = 1; // a new game gets a fresh hint
+      startRound(appState.mode);
+    });
     document.getElementById("btn-arrange-menu").addEventListener("click", () => {
       clearTimers();
       showScreen("screen-menu");
     });
 
-    document.getElementById("btn-play-again").addEventListener("click", () => startRound(appState.mode));
+    document.getElementById("btn-reroll").addEventListener("click", rerollQuestion);
+    document.getElementById("btn-play-again").addEventListener("click", () => {
+      appState.rerollsLeft = 1; // a new game gets a fresh re-roll
+      startRound(appState.mode);
+    });
     document.getElementById("btn-feedback-menu").addEventListener("click", () => {
       clearTimers();
       showScreen("screen-menu");

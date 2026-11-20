@@ -244,6 +244,97 @@
     height: 70%;
   }
 
+  /* Full Recall: drag-and-drop arrange screen */
+  .arrange-board {
+    position: relative;
+    width: 100%;
+    display: flex;
+    justify-content: center;
+  }
+
+  /* Leave room for the fixed streak bar at the bottom of the page */
+  #screen-arrange { padding-bottom: 72px; }
+
+  #arrange-grid {
+    width: min(100%, var(--maxw), calc((100vh - 340px) * var(--cols) / var(--rows)));
+    min-width: 200px;
+  }
+
+  .zone {
+    background: rgba(255,255,255,0.08);
+    border: 2px dashed rgba(255,255,255,0.28);
+    box-shadow: none;
+  }
+  .zone.hover { border-color: var(--accent); background: rgba(66,133,244,0.25); }
+  .zone.blank { background: transparent; border: none; box-shadow: none; }
+
+  /* Red cover on every incorrectly placed tile after Submit */
+  .zone.wrong::after {
+    content: "\2715";
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(229,62,62,0.62);
+    color: #fff;
+    font-size: 2.4rem;
+    font-weight: 700;
+    z-index: 2;
+  }
+
+  /* One row when the tiles fit at a readable size, otherwise wrapped into as few rows as needed (--per = tiles per row, set from JS) */
+  .tray {
+    --per: 4;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    width: 100%;
+    max-width: 720px;
+    justify-content: center;
+  }
+
+  .tray-slot {
+    position: relative;
+    flex: 0 0 auto;
+    width: calc((100% - (var(--per) - 1) * 8px) / var(--per));
+    max-width: 88px;
+    aspect-ratio: 1;
+    border-radius: 12px;
+    background: rgba(255,255,255,0.05);
+  }
+
+  .tile {
+    touch-action: none;
+    user-select: none;
+    -webkit-user-select: none;
+    cursor: grab;
+  }
+  .tile * { pointer-events: none; }
+  .tray-slot > .tile, .zone > .tile { position: absolute; inset: 0; }
+  .tile.dragging {
+    position: fixed;
+    inset: auto;
+    z-index: 100;
+    margin: 0;
+    cursor: grabbing;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+    transform: scale(1.06);
+  }
+  .arrange-locked .tile { cursor: default; }
+
+  .result-mark {
+    position: absolute;
+    inset: 0;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    pointer-events: none;
+    z-index: 3;
+  }
+  .result-mark.show { display: flex; }
+  .result-mark svg { width: min(60%, 220px); filter: drop-shadow(0 4px 14px rgba(0,0,0,0.5)); }
+
   /* Question */
   .question-text {
     font-size: 1.8rem;
@@ -341,7 +432,7 @@
 
   <section class="screen active" id="screen-menu">
     <h1>Memory Game</h1>
-    <p>Pick a difficulty to begin.</p>
+    <p id="menu-prompt">Choose a game mode.</p>
     <div class="menu-buttons" id="menu-buttons"></div>
     <div class="leaderboard" id="leaderboard">
       <h3>Top scores</h3>
@@ -386,6 +477,23 @@
         <p>Next round</p>
         <button id="btn-ready">Ready</button>
       </div>
+    </div>
+  </section>
+
+  <section class="screen" id="screen-arrange">
+    <span class="mode-badge" id="arrange-mode-badge"></span>
+    <div class="arrange-board">
+      <div class="grid" id="arrange-grid"></div>
+      <div class="result-mark" id="arrange-mark">
+        <svg viewBox="0 0 100 100" aria-label="Correct"><circle cx="50" cy="50" r="46" fill="#38a169" fill-opacity="0.93"/><path d="M28 52 L44 68 L73 33" fill="none" stroke="#fff" stroke-width="10" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </div>
+    </div>
+    <div class="tray" id="arrange-tray"></div>
+    <button id="btn-submit-arrangement" disabled>Submit</button>
+    <p id="arrange-detail"></p>
+    <div class="feedback-buttons" id="arrange-buttons" style="display:none">
+      <button id="btn-arrange-again">Play Again</button>
+      <button class="secondary" id="btn-arrange-menu">Main Menu</button>
     </div>
   </section>
 
@@ -512,7 +620,7 @@
     "rect:FFFF00": ["rectangle", "yellow", "square"],
     "rhino.png": ["rhino"],
     "rooster.png": ["rooster"],
-    "smileyFace:FFFF00": ["smiley face"],
+    "smileyFace:FFFF00": ["smiley face", "smiley", "smile", "happy face", "happy"],
     "star5:0000FF": ["star"],
     "strawberry.png": ["strawberry"],
     "sun:FF9900": ["sun"],
@@ -607,6 +715,17 @@
     hard:   { name: "hard",   label: "Hard",   rows: 3, cols: 3, studyTimeSeconds: 10, contentPool: ROUNDS.hard },
     insane: { name: "insane", label: "Insane", rows: 6, cols: 6, studyTimeSeconds: 20, contentPool: ROUNDS.insane }
   };
+
+  // "Full Recall": same grids, rounds and study times as Classic easy/medium/hard (copied from MODES,
+  // so change timers there), but the player drags every item back into place instead of typing answers.
+  const FULL_RECALL_MODES = {};
+  ["easy", "medium", "hard"].forEach(key => {
+    FULL_RECALL_MODES[key] = Object.assign({}, MODES[key], {
+      name: "fullrecall-" + key,
+      label: "Full Recall " + MODES[key].label,
+      variant: "fullrecall"
+    });
+  });
 
   // Grids with 2 or 3 rows/columns are asked by name ("bottom right"); bigger ones by number ("row 1 column 2").
   const ROW_NAMES = { 2: ["top", "bottom"], 3: ["top", "middle", "bottom"] };
@@ -848,7 +967,7 @@
     roundToken: 0
   };
 
-  const STREAK_VISIBLE_SCREENS = ["screen-study", "screen-question", "screen-feedback"];
+  const STREAK_VISIBLE_SCREENS = ["screen-study", "screen-arrange", "screen-question", "screen-feedback"];
 
   const screens = {};
   document.querySelectorAll(".screen").forEach(el => { screens[el.id] = el; });
@@ -861,7 +980,10 @@
     const streakBar = document.getElementById("streak-bar");
     streakBar.classList.toggle("visible", STREAK_VISIBLE_SCREENS.includes(id));
 
-    if (id === "screen-menu") renderLeaderboard();
+    if (id === "screen-menu") {
+      renderMenu(null);
+      renderLeaderboard();
+    }
   }
 
   function updateStreakDisplay() {
@@ -881,15 +1003,29 @@
 
   // ---- Menu ----
 
-  function renderMenu() {
+  // Two steps: first pick Classic or Full Recall (variant = null), then a difficulty.
+  function renderMenu(variant) {
     const container = document.getElementById("menu-buttons");
+    const prompt = document.getElementById("menu-prompt");
     container.innerHTML = "";
-    Object.values(MODES).forEach(mode => {
+    const addButton = (label, onClick, secondary) => {
       const btn = document.createElement("button");
-      btn.textContent = mode.label;
-      btn.addEventListener("click", () => onSelectMode(mode));
+      btn.textContent = label;
+      if (secondary) btn.className = "secondary";
+      btn.addEventListener("click", onClick);
       container.appendChild(btn);
-    });
+    };
+
+    if (!variant) {
+      prompt.textContent = "Classic: type what was where. Full Recall: drag everything back into place.";
+      addButton("Classic", () => renderMenu("classic"));
+      addButton("Full Recall", () => renderMenu("fullrecall"));
+      return;
+    }
+    prompt.textContent = "Pick a difficulty to begin.";
+    const modes = variant === "fullrecall" ? FULL_RECALL_MODES : MODES;
+    Object.values(modes).forEach(mode => addButton(mode.label, () => onSelectMode(mode)));
+    addButton("Back", () => renderMenu(null), true);
   }
 
   function onSelectMode(mode) {
@@ -908,7 +1044,10 @@
     document.getElementById("instructions-mode-badge").textContent = mode.label;
     document.getElementById("instructions-text").textContent =
       `You will be given ${mode.studyTimeSeconds} seconds to memorize the objects on a ${mode.cols}x${mode.rows} grid. ` +
-      `After time's up, you will be asked to recall the item in a specific location.`;
+      (mode.variant === "fullrecall"
+        ? `After time's up, the grid goes blank and the objects appear in a row at the bottom. ` +
+          `Drag each one back to where it was, then tap Submit.`
+        : `After time's up, you will be asked to recall the item in a specific location.`);
     showScreen("screen-instructions");
     preloadPhotos(mode);
   }
@@ -1022,7 +1161,8 @@
 
       if (elapsed >= durationMs) {
         appState.rafHandle = null;
-        enterQuestion();
+        if (appState.mode.variant === "fullrecall") enterArrange();
+        else enterQuestion();
       } else {
         appState.rafHandle = requestAnimationFrame(tick);
       }
@@ -1078,6 +1218,215 @@
         (finalStreak > 0 ? ` Final streak: ${finalStreak}.` : "");
       buttonsEl.style.display = "flex";
       showScreen("screen-feedback");
+    }
+  }
+
+  // ---- Full Recall: drag the items back into the grid ----
+
+  // zones: one per grid square that held an item ({el, expectedId, item}); items: the draggable tiles
+  // ({cell, id, el, slot, zone}). item.zone is the zone it sits in (or null while it is in the tray).
+  let arrange = { zones: [], items: [], locked: true };
+
+  function shuffled(list) {
+    const a = list.slice();
+    for (let i = a.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [a[i], a[j]] = [a[j], a[i]];
+    }
+    return a;
+  }
+
+  function resetTileStyle(item) {
+    item.el.classList.remove("dragging");
+    item.el.style.cssText = "";
+  }
+
+  function attachToZone(item, zone) {
+    resetTileStyle(item);
+    zone.item = item;
+    item.zone = zone;
+    zone.el.appendChild(item.el);
+  }
+
+  function returnToTray(item) {
+    resetTileStyle(item);
+    item.zone = null;
+    item.slot.appendChild(item.el);
+  }
+
+  function updateSubmitState() {
+    document.getElementById("btn-submit-arrangement").disabled =
+      arrange.locked || !arrange.zones.every(z => z.item);
+  }
+
+  function enterArrange() {
+    const mode = appState.mode;
+    const round = appState.round;
+    document.getElementById("arrange-mode-badge").textContent = mode.label;
+
+    const grid = document.getElementById("arrange-grid");
+    grid.style.setProperty("--rows", String(mode.rows));
+    grid.style.setProperty("--cols", String(mode.cols));
+    grid.style.aspectRatio = `${mode.cols} / ${mode.rows}`;
+    grid.classList.toggle("dense", mode.rows * mode.cols > 9);
+    grid.innerHTML = "";
+
+    arrange = { zones: [], items: [], locked: false };
+    const byPosition = new Map(round.cells.map(c => [c.r + "," + c.c, c]));
+    for (let r = 0; r < mode.rows; r++) {
+      for (let c = 0; c < mode.cols; c++) {
+        const cell = byPosition.get(r + "," + c);
+        const el = document.createElement("div");
+        if (cell) {
+          el.className = "cell zone";
+          arrange.zones.push({ el, expectedId: itemId(cell), item: null });
+        } else {
+          el.className = "cell zone blank";
+        }
+        grid.appendChild(el);
+      }
+    }
+
+    const tray = document.getElementById("arrange-tray");
+    tray.innerHTML = "";
+    shuffled(round.cells).forEach(cell => {
+      const slot = document.createElement("div");
+      slot.className = "tray-slot";
+      const el = document.createElement("div");
+      el.className = "cell tile";
+      el.innerHTML = renderCellContent(cell);
+      const item = { cell, id: itemId(cell), el, slot, zone: null };
+      el.addEventListener("pointerdown", (e) => onTilePointerDown(e, item));
+      slot.appendChild(el);
+      tray.appendChild(slot);
+      arrange.items.push(item);
+    });
+
+    document.getElementById("screen-arrange").classList.remove("arrange-locked");
+    document.getElementById("arrange-mark").classList.remove("show");
+    document.getElementById("arrange-detail").textContent = "";
+    document.getElementById("arrange-buttons").style.display = "none";
+    const submit = document.getElementById("btn-submit-arrangement");
+    submit.style.display = "";
+    updateSubmitState();
+    showScreen("screen-arrange");
+
+    // Size the tray: keep tiles at least 56px wide by wrapping onto extra rows when needed.
+    const n = arrange.items.length;
+    const trayWidth = tray.clientWidth;
+    let rows = 1;
+    while (rows < n && (trayWidth - (Math.ceil(n / rows) - 1) * 8) / Math.ceil(n / rows) < 56) rows++;
+    tray.style.setProperty("--per", String(Math.ceil(n / rows)));
+  }
+
+  function zoneAt(x, y) {
+    return arrange.zones.find(z => {
+      const r = z.el.getBoundingClientRect();
+      return x >= r.left && x <= r.right && y >= r.top && y <= r.bottom;
+    }) || null;
+  }
+
+  function onTilePointerDown(e, item) {
+    if (arrange.locked || (e.pointerType === "mouse" && e.button !== 0)) return;
+    e.preventDefault();
+    const startX = e.clientX, startY = e.clientY;
+    const rect = item.el.getBoundingClientRect();
+    const offX = startX - rect.left, offY = startY - rect.top;
+    let dragging = false;
+    let hover = null;
+
+    const setHover = (zone) => {
+      if (hover === zone) return;
+      if (hover) hover.el.classList.remove("hover");
+      hover = zone;
+      if (hover) hover.el.classList.add("hover");
+    };
+
+    const move = (ev) => {
+      if (ev.pointerId !== e.pointerId) return;
+      if (!dragging) {
+        if (Math.hypot(ev.clientX - startX, ev.clientY - startY) < 6) return;
+        dragging = true;
+        // Lift the tile out of its slot/zone so it can float above everything.
+        item.el.style.width = rect.width + "px";
+        item.el.style.height = rect.height + "px";
+        item.el.classList.add("dragging");
+        document.body.appendChild(item.el);
+      }
+      item.el.style.left = (ev.clientX - offX) + "px";
+      item.el.style.top = (ev.clientY - offY) + "px";
+      setHover(zoneAt(ev.clientX, ev.clientY));
+    };
+
+    const finish = (ev, cancelled) => {
+      if (ev.pointerId !== e.pointerId) return;
+      window.removeEventListener("pointermove", move);
+      window.removeEventListener("pointerup", up);
+      window.removeEventListener("pointercancel", cancel);
+      setHover(null);
+
+      if (!dragging) {
+        // A tap on a placed tile sends it back to the tray.
+        if (!cancelled && item.zone && !arrange.locked) {
+          item.zone.item = null;
+          returnToTray(item);
+          updateSubmitState();
+        }
+        return;
+      }
+
+      const origin = item.zone;
+      const target = cancelled ? null : zoneAt(ev.clientX, ev.clientY);
+      if (!target || target === origin) {
+        // Dropped outside the grid (or back on its own square): go back where it came from.
+        if (origin) attachToZone(item, origin); else returnToTray(item);
+      } else {
+        const occupant = target.item;
+        if (origin) origin.item = null;
+        target.item = null;
+        if (occupant) occupant.zone = null;
+        attachToZone(item, target);
+        if (occupant) {
+          if (origin) attachToZone(occupant, origin); else returnToTray(occupant);
+        }
+      }
+      updateSubmitState();
+    };
+    const up = (ev) => finish(ev, false);
+    const cancel = (ev) => finish(ev, true);
+
+    window.addEventListener("pointermove", move);
+    window.addEventListener("pointerup", up);
+    window.addEventListener("pointercancel", cancel);
+  }
+
+  function submitArrangement() {
+    if (arrange.locked || !arrange.zones.every(z => z.item)) return;
+    arrange.locked = true;
+    document.getElementById("screen-arrange").classList.add("arrange-locked");
+    document.getElementById("btn-submit-arrangement").style.display = "none";
+
+    // Items are compared by identity (picture / shape / text), so two identical items can swap places.
+    const wrong = arrange.zones.filter(z => z.item.id !== z.expectedId);
+    arrange.zones.forEach(z => z.el.classList.toggle("wrong", wrong.includes(z)));
+
+    if (wrong.length === 0) {
+      appState.streak += 1;
+      updateStreakDisplay();
+      document.getElementById("arrange-mark").classList.add("show");
+      appState.advanceTimeoutHandle = setTimeout(() => {
+        appState.advanceTimeoutHandle = null;
+        startRound(appState.mode, null, null, true);
+      }, 1400);
+    } else {
+      const finalStreak = appState.streak;
+      appState.streak = 0;
+      updateStreakDisplay();
+      appState.pendingSubmit = submitScore(appState.mode.name, getPlayerName(), finalStreak);
+      document.getElementById("arrange-detail").textContent =
+        `Incorrect: ${wrong.length} ${wrong.length === 1 ? "tile is" : "tiles are"} in the wrong place.` +
+        (finalStreak > 0 ? ` Final streak: ${finalStreak}.` : "");
+      document.getElementById("arrange-buttons").style.display = "flex";
     }
   }
 
@@ -1184,7 +1533,8 @@
     await appState.pendingSubmit.catch(() => {});
     // One row per memory mode, then a last row for the Road to Veracruz game
     // (its scores are stored in the same database under "veracruz", in metres).
-    const rows = Object.values(MODES).map(m => ({ key: m.name, label: m.label, unit: "" }));
+    const rows = Object.values(MODES).concat(Object.values(FULL_RECALL_MODES))
+      .map(m => ({ key: m.name, label: m.label, unit: "" }));
     rows.push({ key: "veracruz", label: "Road to Veracruz", unit: " m" });
     const results = await Promise.all(rows.map(r => getTopScore(r.key)));
     if (request !== leaderboardRequest) return; // a newer render superseded this one
@@ -1264,6 +1614,13 @@
       if (e.key === "Enter") submitAnswer();
     });
 
+    document.getElementById("btn-submit-arrangement").addEventListener("click", submitArrangement);
+    document.getElementById("btn-arrange-again").addEventListener("click", () => startRound(appState.mode));
+    document.getElementById("btn-arrange-menu").addEventListener("click", () => {
+      clearTimers();
+      showScreen("screen-menu");
+    });
+
     document.getElementById("btn-play-again").addEventListener("click", () => startRound(appState.mode));
     document.getElementById("btn-feedback-menu").addEventListener("click", () => {
       clearTimers();
@@ -1276,7 +1633,7 @@
   init();
 
   // Small hook for automated checks in the browser console; the game itself doesn't use it.
-  window.__memoryGame = { MODES, ROUNDS, appState, isCorrect, startRound, positionLabel, submitScore, getTopScore };
+  window.__memoryGame = { MODES, FULL_RECALL_MODES, ROUNDS, appState, enterArrange, submitArrangement, getArrange: () => arrange, isCorrect, startRound, positionLabel, submitScore, getTopScore };
 })();
 </script>
 </body>

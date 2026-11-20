@@ -108,6 +108,27 @@
     text-align: center;
   }
 
+  .lb-tabs {
+    display: flex;
+    gap: 6px;
+    margin-bottom: 12px;
+  }
+
+  .lb-tab {
+    flex: 1 1 0;
+    min-width: 0;
+    padding: 8px 4px;
+    font-size: 0.78rem;
+    line-height: 1.2;
+    font-weight: 600;
+    border-radius: 8px;
+    background: transparent;
+    border: 1px solid rgba(255,255,255,0.18);
+    color: var(--muted);
+  }
+  .lb-tab:hover { background: rgba(255,255,255,0.06); color: var(--text); }
+  .lb-tab.active { background: var(--accent); border-color: var(--accent); color: #fff; }
+
   .leaderboard ul {
     list-style: none;
     margin: 0;
@@ -435,7 +456,12 @@
     <p id="menu-prompt">Choose a game mode.</p>
     <div class="menu-buttons" id="menu-buttons"></div>
     <div class="leaderboard" id="leaderboard">
-      <h3>Top scores</h3>
+      <h3>Leaderboard</h3>
+      <div class="lb-tabs" id="leaderboard-tabs" role="tablist">
+        <button class="lb-tab" role="tab" data-tab="classic">Classic</button>
+        <button class="lb-tab" role="tab" data-tab="fullrecall">Full Recall</button>
+        <button class="lb-tab" role="tab" data-tab="veracruz">Road to Veracruz</button>
+      </div>
       <ul id="leaderboard-list"></ul>
       <div class="lb-foot" id="leaderboard-note"></div>
       <div class="lb-foot" id="leaderboard-player"></div>
@@ -958,6 +984,7 @@
     round: null,
     question: null,
     lastRoundIndexByMode: {},
+    leaderboardTab: "classic",
     rafHandle: null,
     advanceTimeoutHandle: null,
     streak: 0,
@@ -1531,11 +1558,21 @@
     const playerEl = document.getElementById("leaderboard-player");
 
     await appState.pendingSubmit.catch(() => {});
-    // One row per memory mode, then a last row for the Road to Veracruz game
-    // (its scores are stored in the same database under "veracruz", in metres).
-    const rows = Object.values(MODES).concat(Object.values(FULL_RECALL_MODES))
-      .map(m => ({ key: m.name, label: m.label, unit: "" }));
-    rows.push({ key: "veracruz", label: "Road to Veracruz", unit: " m" });
+    // Three tabs: Classic and Full Recall list one row per difficulty; Road to Veracruz has a single
+    // row (its scores are stored in the same database under "veracruz", in metres).
+    const tab = appState.leaderboardTab;
+    document.querySelectorAll("#leaderboard-tabs .lb-tab").forEach(btn => {
+      const active = btn.dataset.tab === tab;
+      btn.classList.toggle("active", active);
+      btn.setAttribute("aria-selected", String(active));
+    });
+    let rows;
+    if (tab === "veracruz") {
+      rows = [{ key: "veracruz", label: "Best distance", unit: " m" }];
+    } else {
+      const modes = tab === "fullrecall" ? FULL_RECALL_MODES : MODES;
+      rows = Object.values(modes).map(m => ({ key: m.name, label: m.label.replace(/^Full Recall /, ""), unit: "" }));
+    }
     const results = await Promise.all(rows.map(r => getTopScore(r.key)));
     if (request !== leaderboardRequest) return; // a newer render superseded this one
 
@@ -1596,6 +1633,13 @@
 
   function init() {
     renderMenu();
+
+    document.querySelectorAll("#leaderboard-tabs .lb-tab").forEach(btn => {
+      btn.addEventListener("click", () => {
+        appState.leaderboardTab = btn.dataset.tab;
+        renderLeaderboard();
+      });
+    });
 
     document.getElementById("btn-save-name").addEventListener("click", saveName);
     document.getElementById("name-input").addEventListener("keydown", (e) => {

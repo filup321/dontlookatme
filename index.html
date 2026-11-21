@@ -831,6 +831,50 @@
         {"r":3,"c":2,"type":"text","value":"12"},
         {"r":3,"c":3,"type":"text","value":"1"}
       ]
+    },
+    {
+      id: "2026-11-22",
+      until: "2026-11-23T01:00:00-08:00",
+      cells: [
+        {"r":0,"c":0,"type":"photo","value":"california.png"},
+        {"r":0,"c":1,"type":"photo","value":"daily2-r0c1.png"},
+        {"r":0,"c":2,"type":"text","value":"2"},
+        {"r":0,"c":3,"type":"photo","value":"daily2-r0c3.png"},
+        {"r":1,"c":0,"type":"shape","value":{"geom": "mathPlus", "color": "000000"}},
+        {"r":1,"c":1,"type":"photo","value":"daily2-r1c1.png"},
+        {"r":1,"c":2,"type":"photo","value":"daily2-r1c2.png"},
+        {"r":1,"c":3,"type":"text","value":"3"},
+        {"r":2,"c":0,"type":"shape","value":{"geom": "mathEqual", "color": "000000"}},
+        {"r":2,"c":1,"type":"photo","value":"daily2-r2c1.png"},
+        {"r":2,"c":2,"type":"photo","value":"daily2-r2c2.png"},
+        {"r":2,"c":3,"type":"photo","value":"daily2-r2c3.png"},
+        {"r":3,"c":0,"type":"photo","value":"texas.png"},
+        {"r":3,"c":1,"type":"photo","value":"daily2-r3c1.png"},
+        {"r":3,"c":2,"type":"photo","value":"daily2-r3c2.png"},
+        {"r":3,"c":3,"type":"photo","value":"florida.png"}
+      ]
+    },
+    {
+      id: "2026-11-23",
+      until: "2026-11-24T01:00:00-08:00",
+      cells: [
+        {"r":0,"c":0,"type":"photo","value":"taco.png"},
+        {"r":0,"c":1,"type":"photo","value":"donut.png"},
+        {"r":0,"c":2,"type":"photo","value":"pig.png"},
+        {"r":0,"c":3,"type":"shape","value":{"geom": "lightningBolt", "color": "FF0000"}},
+        {"r":1,"c":0,"type":"photo","value":"daily3-r1c0.png"},
+        {"r":1,"c":1,"type":"photo","value":"cookie.png"},
+        {"r":1,"c":2,"type":"photo","value":"orange.png"},
+        {"r":1,"c":3,"type":"shape","value":{"geom": "sun", "color": "FF9900"}},
+        {"r":2,"c":0,"type":"text","value":"84"},
+        {"r":2,"c":1,"type":"text","value":"8"},
+        {"r":2,"c":2,"type":"text","value":"4"},
+        {"r":2,"c":3,"type":"text","value":"48"},
+        {"r":3,"c":0,"type":"photo","value":"strawberry.png"},
+        {"r":3,"c":1,"type":"photo","value":"daily3-r3c1.png"},
+        {"r":3,"c":2,"type":"photo","value":"daily3-r3c2.png"},
+        {"r":3,"c":3,"type":"shape","value":{"geom": "smileyFace", "color": "FFFF00"}}
+      ]
     }
   ];
   const DAILY_STUDY_SECONDS = 12;
@@ -881,6 +925,10 @@
     mathPlus: (color) => `<div style="position:relative;width:60%;height:60%;">
         <div style="position:absolute;top:40%;left:0;width:100%;height:20%;background:${hex(color)};border-radius:3px;"></div>
         <div style="position:absolute;left:40%;top:0;height:100%;width:20%;background:${hex(color)};border-radius:3px;"></div>
+      </div>`,
+    mathEqual: (color) => `<div style="position:relative;width:60%;height:60%;">
+        <div style="position:absolute;top:22%;left:0;width:100%;height:17%;background:${hex(color)};border-radius:3px;"></div>
+        <div style="position:absolute;top:61%;left:0;width:100%;height:17%;background:${hex(color)};border-radius:3px;"></div>
       </div>`,
     star5: (color) => `<svg viewBox="0 0 100 100"><polygon fill="${hex(color)}" points="50,3 61,37 97,37 68,59 79,94 50,73 21,94 32,59 3,37 39,37"/></svg>`,
     heart: (color) => `<svg viewBox="0 0 32 29"><path fill="${hex(color)}" d="M16 29 C16 29 0 18 0 8 C0 2 4 0 8 0 C12 0 15 3 16 6 C17 3 20 0 24 0 C28 0 32 2 32 8 C32 18 16 29 16 29 Z"/></svg>`,
@@ -1220,15 +1268,22 @@
       const total = grid.cells.length;
       text.textContent = `You already played today's Daily Recall and got ${result.score} of ${total} correct. ` +
         `A new grid arrives every day at 1am Pacific.`;
-      appState.shareText = dailyShareText(result.score);
+      appState.shareText = dailyShareText(result.score, result.marks);
       shareBtn.style.display = "";
       shareBtn.textContent = "Share your score";
     }
     showScreen("screen-daily-done");
   }
 
-  function dailyShareText(score) {
-    return `I just scored ${score} on Daily Recall. Can you beat it?`;
+  // marks: 16-character string, row by row, "1" = right, "0" = wrong. Shared as a grid of green/red squares.
+  function dailyShareText(score, marks) {
+    let text = `I just scored ${score} on Daily Recall. Can you beat it?`;
+    if (marks && marks.length === 16) {
+      const rows = [];
+      for (let r = 0; r < 4; r++) rows.push(marks.slice(r * 4, r * 4 + 4).replace(/1/g, "\u{1F7E9}").replace(/0/g, "\u{1F7E5}"));
+      text += "\n\n" + rows.join("\n");
+    }
+    return text;
   }
 
   function onSelectMode(mode) {
@@ -1672,8 +1727,9 @@
 
     if (appState.mode.variant === "daily") {
       const total = arrange.zones.length, score = total - wrong.length;
-      saveDailyResult(appState.mode.dailyId, { score, finished: true, ts: Date.now() });
-      appState.shareText = dailyShareText(score);
+      const marks = arrange.zones.map(z => (wrong.includes(z) ? "0" : "1")).join("");   // zones are in row-by-row order
+      saveDailyResult(appState.mode.dailyId, { score, marks, finished: true, ts: Date.now() });
+      appState.shareText = dailyShareText(score, marks);
       const shareBtn = document.getElementById("btn-share-arrange");
       shareBtn.style.display = "";
       shareBtn.textContent = "Share your score";
@@ -1734,7 +1790,7 @@
     const url = location.origin + location.pathname.replace(/index\.html$/, "");
     const text = appState.shareText || "Try this memory game!";
     // Message and link go in ONE text string (no separate url field): some iPhone share targets keep only the url and drop the text.
-    const full = `${text} ${url}`;
+    const full = text.includes("\n") ? `${text}\n\n${url}` : `${text} ${url}`;
     if (navigator.share) {
       try {
         await navigator.share({ title: "Memory Game", text: full });

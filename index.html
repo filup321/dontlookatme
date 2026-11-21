@@ -1733,15 +1733,16 @@
   async function shareScore(btn) {
     const url = location.origin + location.pathname.replace(/index\.html$/, "");
     const text = appState.shareText || "Try this memory game!";
+    // Message and link go in ONE text string (no separate url field): some iPhone share targets keep only the url and drop the text.
+    const full = `${text} ${url}`;
     if (navigator.share) {
       try {
-        await navigator.share({ title: "Memory Game", text, url });
+        await navigator.share({ title: "Memory Game", text: full });
         return;
       } catch (e) {
         if (e && e.name === "AbortError") return; // player closed the share sheet
       }
     }
-    const full = `${text} ${url}`;
     try {
       await navigator.clipboard.writeText(full);
       btn.textContent = "Copied to clipboard!";

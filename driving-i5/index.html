@@ -1,0 +1,769 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<title>Driving I5</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
+<style>
+  :root { --yellow:#f6c90e; --ink:#0b0b10; }
+  * { box-sizing: border-box; }
+  html, body { margin:0; height:100%; background:#08080c; overflow:hidden; touch-action:none;
+    -webkit-user-select:none; user-select:none; -webkit-touch-callout:none; -webkit-tap-highlight-color:transparent;
+    font-family:"Press Start 2P", ui-monospace, Menlo, monospace; }
+  #stage { position:absolute; left:50%; top:50%; transform:translate(-50%,-50%); overflow:hidden; background:#222; }
+  #stage canvas { position:absolute; inset:0; width:100%; height:100%; image-rendering:pixelated; display:block; }
+  #blur { position:absolute; inset:0; pointer-events:none; display:none;
+    -webkit-backdrop-filter:blur(var(--b,0px)); backdrop-filter:blur(var(--b,0px));
+    -webkit-mask-image:radial-gradient(ellipse 62% 56% at 50% 52%, transparent 0%, transparent 42%, #000 100%);
+            mask-image:radial-gradient(ellipse 62% 56% at 50% 52%, transparent 0%, transparent 42%, #000 100%); }
+  #flash { position:absolute; inset:0; pointer-events:none; display:none; }
+  #flash.on { display:block; animation:rb .5s steps(1) infinite; }
+  @keyframes rb { 0%{background:rgba(0,70,255,.5)} 50%{background:rgba(255,0,20,.5)} }
+  #flash.crash { display:block; animation:none; background:rgba(255,255,255,.55); opacity:0; transition:opacity .6s; }
+
+  /* coffee button */
+  #coffee { position:absolute; left:35.2em; top:64.2em; width:6em; height:6.2em; border:.3em solid var(--yellow);
+    border-radius:1em; background:#5a3416; color:#fff; font:inherit; font-size:inherit; padding:0; cursor:pointer;
+    display:flex; flex-direction:column; align-items:center; justify-content:center; gap:.2em;
+    box-shadow:0 .4em 0 #2a180a; touch-action:none; }
+  #coffee svg { width:3.2em; height:3.2em; }
+  #coffee span { font-size:.62em; letter-spacing:.05em; }
+  #coffee:active { transform:translateY(.2em); box-shadow:0 .2em 0 #2a180a; }
+  #coffee.cd { filter:grayscale(.8) brightness(.7); }
+  #coffee.pulse { animation:pulse .5s steps(2) infinite; }
+  @keyframes pulse { 50% { background:#c0392b; transform:scale(1.1);} }
+
+  /* panels */
+  .panel { position:absolute; left:6em; right:6em; top:8em; background:rgba(10,12,20,.93); border:.4em solid var(--yellow);
+    color:#fff; padding:2.2em 1.6em; text-align:center; font-size:1em; line-height:1.7; box-shadow:0 0 0 .4em #000; }
+  .panel.hidden, .hidden { display:none !important; }
+  .panel h1 { font-size:2.1em; margin:0 0 .5em; color:var(--yellow); line-height:1.25; text-shadow:.15em .15em 0 #000; }
+  .panel h2 { font-size:1.15em; margin:0 0 .8em; color:var(--yellow); }
+  .panel p { font-size:.95em; margin:.4em 0; }
+  .panel ul { list-style:none; padding:0; margin:1em 0; text-align:left; font-size:.82em; line-height:2; }
+  .panel li b { color:var(--yellow); font-weight:normal; }
+  .btn { display:block; width:100%; margin:.8em 0 0; padding:1em .6em; font:inherit; font-size:1.2em; color:#000;
+    background:var(--yellow); border:.25em solid #000; box-shadow:0 .35em 0 #8a6f00; cursor:pointer; }
+  .btn:active { transform:translateY(.25em); box-shadow:0 .1em 0 #8a6f00; }
+  .btn.alt { background:#3a3f55; color:#fff; box-shadow:0 .35em 0 #1a1d2a; font-size:.9em; }
+  #over { top:14em; }
+  #over.busted { border-color:#fff; }
+  #over .big { font-size:2.3em; margin:.2em 0 .5em; color:#ff5a4a; text-shadow:.12em .12em 0 #000; }
+  #over.busted .big { animation:txt .5s steps(1) infinite; }
+  @keyframes txt { 0%{color:#4a7bff} 50%{color:#ff4a4a} }
+  #tune { top:4em; bottom:4em; overflow:auto; text-align:left; touch-action:pan-y; }
+  #tune h2 { text-align:center; }
+  .row { margin:.9em 0; font-size:.8em; }
+  .row label { display:flex; justify-content:space-between; margin-bottom:.4em; }
+  .row label b { color:var(--yellow); font-weight:normal; }
+  .row input[type=range] { width:100%; accent-color:var(--yellow); }
+</style>
+</head>
+<body>
+<div id="stage">
+  <canvas id="scene" width="420" height="720"></canvas>
+  <div id="blur"></div>
+  <canvas id="hud" width="420" height="720"></canvas>
+  <div id="flash"></div>
+
+  <button id="coffee" class="ui hidden" aria-label="Drink coffee">
+    <svg viewBox="0 0 16 16" shape-rendering="crispEdges">
+      <rect x="5" y="0" width="1" height="2" fill="#fff" opacity=".7"/><rect x="8" y="1" width="1" height="2" fill="#fff" opacity=".7"/><rect x="11" y="0" width="1" height="2" fill="#fff" opacity=".7"/>
+      <rect x="2" y="4" width="10" height="1" fill="#111"/><rect x="1" y="5" width="12" height="8" fill="#111"/>
+      <rect x="2" y="5" width="10" height="7" fill="#f4efe6"/><rect x="2" y="5" width="10" height="2" fill="#6b3f1d"/>
+      <rect x="12" y="6" width="3" height="1" fill="#111"/><rect x="14" y="7" width="1" height="3" fill="#111"/><rect x="12" y="10" width="3" height="1" fill="#111"/>
+      <rect x="2" y="13" width="10" height="1" fill="#111"/>
+    </svg>
+    <span>COFFEE</span>
+  </button>
+
+  <div id="menu" class="panel ui">
+    <h1>DRIVING<br>I5</h1>
+    <p>San Francisco &rarr; LA.<br>383 miles of nothing.</p>
+    <ul>
+      <li><b>HOLD</b> screen = gas</li>
+      <li><b>SWIPE</b> &larr; &rarr; = change lane</li>
+      <li><b>TAP</b> COFFEE = wake up</li>
+      <li><b>DON'T</b> rear-end anything</li>
+      <li><b>MOVE OVER</b> for speeders</li>
+      <li><b>90+ MPH</b> = cops</li>
+    </ul>
+    <button id="startBtn" class="btn">START</button>
+    <button id="tuneBtn" class="btn alt">TUNING</button>
+    <a href="../index.html" class="btn alt" style="text-decoration:none;text-align:center;font-size:.75em">&larr; MEMORY GAME</a>
+    <p style="font-size:.55em;opacity:.7;margin-top:1.4em">Desktop: SPACE gas, &larr;/&rarr; steer, C coffee</p>
+  </div>
+
+  <div id="over" class="panel ui hidden">
+    <div class="big" id="overTitle">GAME OVER</div>
+    <p id="overReason"></p>
+    <p style="margin-top:1.2em">MILES DRIVEN</p>
+    <h2 id="overMiles" style="font-size:1.8em">0.0</h2>
+    <p id="overBest" style="font-size:.7em;opacity:.8"></p>
+    <div id="nameRow" class="hidden" style="margin-top:.8em">
+      <p style="font-size:.7em">NAME FOR THE LEADERBOARD</p>
+      <input id="nameInput" maxlength="20" autocomplete="off" style="width:100%;font:inherit;font-size:1em;padding:.6em;text-align:center;background:#000;color:#fff;border:.2em solid #f6c90e">
+      <button id="nameSave" class="btn alt" style="font-size:.8em">SAVE</button>
+    </div>
+    <p id="lbStatus" style="font-size:.6em;opacity:.8;min-height:1.5em"></p>
+    <button id="againBtn" class="btn">DRIVE AGAIN</button>
+    <button id="menuBtn" class="btn alt">MENU / TUNING</button>
+  </div>
+
+  <div id="tune" class="panel ui hidden">
+    <h2>TUNING</h2>
+    <div id="tuneRows"></div>
+    <button id="tuneReset" class="btn alt">RESET DEFAULTS</button>
+    <button id="tuneDone" class="btn">DONE</button>
+  </div>
+</div>
+
+<script src="leaderboard.js"></script>
+<script>
+(() => {
+'use strict';
+
+/* ================================================================
+   CONSTANTS  (world units: yards and mph)
+   ================================================================ */
+const W = 420, H = 720;
+const ROAD_L = 64, ROAD_R = 356, LANE_W = (ROAD_R - ROAD_L) / 3;
+const PX = 10;                  // screen pixels per yard
+const PLAYER_Y = 540;           // where the player's car sits on screen
+const MPH = 1760 / 3600;        // yards per second per 1 mph
+const TOP_SPEED = 100;
+const SPEEDING = 90;            // above this the cop warnings start
+const WARN_YD = 500;            // yards between each warning stage
+const DROWSY_AT = 25;           // % sleepiness below which you get drowsy
+const FAST_SPEED = 95;
+const POLICE_X = 372;
+const CITY_MILES = 383;
+
+/* Tunable from the TUNING screen (saved in this browser) */
+const DEFAULTS = { semi: 7, car: 12, fast: 2.5, drain: 1.2, coffee: 35, delay: 0.30 };
+const TUNING = [
+  { k:'semi',   label:'SEMI TRUCKS / MIN', min:0,   max:30, step:0.5 },
+  { k:'car',    label:'SLOW CARS / MIN',   min:0,   max:40, step:0.5 },
+  { k:'fast',   label:'FAST CARS / MIN',   min:0,   max:10, step:0.5 },
+  { k:'drain',  label:'SLEEP DRAIN %/SEC', min:0.2, max:4,  step:0.1 },
+  { k:'coffee', label:'COFFEE BOOST %',    min:10,  max:60, step:5 },
+  { k:'delay',  label:'DROWSY LAG (SEC)',  min:0,   max:0.8,step:0.05 },
+];
+let cfg = { ...DEFAULTS };
+try { Object.assign(cfg, JSON.parse(localStorage.getItem('i5cfg') || '{}')); } catch (e) {}
+const saveCfg = () => { try { localStorage.setItem('i5cfg', JSON.stringify(cfg)); } catch (e) {} };
+
+const $ = id => document.getElementById(id);
+const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+const rnd = (a, b) => a + Math.random() * (b - a);
+const pick = a => a[Math.floor(Math.random() * a.length)];
+const laneX = i => ROAD_L + LANE_W * (i + 0.5);
+const LANE_NAMES = ['LEFT', 'MIDDLE', 'RIGHT'];
+
+/* ================================================================
+   PIXEL ART SPRITES  (drawn in code, 2px per art-pixel, facing UP, no logos)
+   ================================================================ */
+const S = 2;
+const K = '#0b0b10';
+const GLASS = '#243c4a', GLASS_HI = '#4f7388';
+function cv(w, h) { const c = document.createElement('canvas'); c.width = w * S; c.height = h * S; return c; }
+function R(g, x, y, w, h, col) { g.fillStyle = col; g.fillRect(x * S, y * S, w * S, h * S); }
+const ins = (d, a) => d < a.length ? a[d] : 0;
+
+function carSprite(o) {            // 23 x 40 art-pixels
+  const c = cv(23, 40), g = c.getContext('2d');
+  for (let y = 0; y < 40; y++) { const i = ins(Math.min(y, 39 - y), [5, 3, 2, 1]); R(g, 2 + i, y, 19 - 2 * i, 1, K); }
+  for (let y = 1; y < 39; y++) { const i = ins(Math.min(y - 1, 38 - y), [4, 2, 1]); R(g, 3 + i, y, 17 - 2 * i, 1, o.body); }
+  R(g, 3, 7, 1, 28, o.lo); R(g, 19, 7, 1, 28, o.lo);                         // side shading
+  R(g, 9, 2, 5, 1, '#1a1a1f');                                                 // grille
+  R(g, 4, 3, 4, 2, '#fff6c8'); R(g, 15, 3, 4, 2, '#fff6c8');                   // headlights
+  R(g, 6, 6, 2, 6, o.hi); R(g, 15, 6, 2, 6, o.hi); R(g, 11, 5, 1, 7, o.lo);     // hood gloss
+  R(g, 5, 13, 13, 1, GLASS); R(g, 4, 14, 15, 4, GLASS);                        // windshield
+  R(g, 13, 14, 2, 1, GLASS_HI); R(g, 12, 15, 2, 1, GLASS_HI); R(g, 11, 16, 2, 1, GLASS_HI); R(g, 10, 17, 2, 1, GLASS_HI);
+  R(g, 3, 19, 2, 11, GLASS); R(g, 18, 19, 2, 11, GLASS);                       // side windows
+  R(g, 5, 19, 13, 11, o.lo); R(g, 5, 20, 13, 9, o.roof || o.hi);               // roof
+  R(g, 7, 22, 9, 5, o.roof2 || o.hi);
+  R(g, 5, 30, 13, 4, GLASS); R(g, 8, 31, 2, 1, GLASS_HI); R(g, 9, 32, 2, 1, GLASS_HI); // rear window
+  R(g, 6, 35, 11, 1, o.trunk || o.hi);                                         // trunk gloss
+  R(g, 5, 36, 3, 2, '#e02020'); R(g, 15, 36, 3, 2, '#e02020');                 // tail lights
+  R(g, 0, 14, 3, 3, K); R(g, 0, 15, 2, 1, o.hi); R(g, 20, 14, 3, 3, K); R(g, 21, 15, 2, 1, o.hi); // mirrors
+  return c;
+}
+
+function semiSprite(cab, cabHi, trailer, seam) {   // 25 x 88 art-pixels
+  const c = cv(25, 88), g = c.getContext('2d');
+  for (let y = 0; y < 18; y++) { const i = ins(y, [3, 2, 1]); R(g, 2 + i, y, 21 - 2 * i, 1, K); }
+  for (let y = 1; y < 17; y++) { const i = ins(y - 1, [2, 1]); R(g, 3 + i, y, 19 - 2 * i, 1, cab); }
+  R(g, 9, 1, 7, 1, '#222'); R(g, 4, 2, 4, 2, '#fff6c8'); R(g, 17, 2, 4, 2, '#fff6c8');
+  R(g, 5, 5, 15, 4, GLASS); R(g, 14, 6, 2, 1, GLASS_HI); R(g, 13, 7, 2, 1, GLASS_HI); R(g, 12, 8, 2, 1, GLASS_HI);
+  R(g, 5, 9, 15, 7, cabHi); R(g, 9, 11, 7, 3, cab);
+  R(g, 4, 12, 2, 3, '#c9ccd4'); R(g, 19, 12, 2, 3, '#c9ccd4');                  // exhaust stacks
+  R(g, 0, 6, 3, 4, K); R(g, 0, 7, 2, 2, '#c9ccd4'); R(g, 22, 6, 3, 4, K); R(g, 23, 7, 2, 2, '#c9ccd4');
+  R(g, 8, 17, 9, 4, '#2a2a30'); R(g, 10, 18, 1, 3, '#d33'); R(g, 14, 18, 1, 3, '#33d');   // fifth wheel
+  R(g, 2, 19, 21, 69, K); R(g, 3, 20, 19, 67, trailer);                         // trailer
+  for (let y = 28; y < 82; y += 9) R(g, 3, y, 19, 1, seam);
+  R(g, 12, 20, 1, 67, seam); R(g, 3, 20, 1, 67, seam); R(g, 21, 20, 1, 67, seam);
+  R(g, 3, 83, 19, 4, '#8f929b'); R(g, 4, 84, 4, 2, '#e02020'); R(g, 17, 84, 4, 2, '#e02020');
+  R(g, 1, 62, 1, 14, K); R(g, 23, 62, 1, 14, K);                                // rear wheels peeking out
+  return c;
+}
+
+const CAR_COLORS = [
+  { body:'#c0302e', hi:'#e56a5f', lo:'#7a1c1b' }, { body:'#2f58b8', hi:'#6d93e0', lo:'#1b3578' },
+  { body:'#e4e4ea', hi:'#ffffff', lo:'#9a9aa6' }, { body:'#3a3a44', hi:'#6a6a78', lo:'#1d1d24' },
+  { body:'#2e8b57', hi:'#6cc597', lo:'#175234' }, { body:'#d9892b', hi:'#f2b968', lo:'#8a5412' },
+  { body:'#8a8d99', hi:'#c3c6d2', lo:'#555864' },
+];
+const SEMI_LOOKS = [
+  ['#b5322f', '#d9665f', '#e9e9ee', '#c4c7ce'], ['#2c5fb0', '#6d93e0', '#c9ccd3', '#aeb2bb'],
+  ['#e8e8ec', '#ffffff', '#d8c9a3', '#bba97c'], ['#2f8a55', '#6cc597', '#bcd0e6', '#9db5d0'],
+  ['#d9782b', '#f2b968', '#e9e9ee', '#c4c7ce'], ['#3a3a44', '#6a6a78', '#e9e9ee', '#c4c7ce'],
+];
+const spr = {
+  player: carSprite({ body:'#b9bcc6', hi:'#dfe2ea', lo:'#7e8290', roof:'#aab0c4', roof2:'#c3c9dc' }),
+  fast:   carSprite({ body:'#1f1f29', hi:'#454558', lo:'#0f0f15', roof:'#2c2c3a', roof2:'#3a3a4c' }),
+  police: carSprite({ body:'#17171d', hi:'#3a3a46', lo:'#0b0b10', roof:'#f0f0f2', roof2:'#ffffff', trunk:'#f0f0f2' }),
+  cars:   CAR_COLORS.map(carSprite),
+  semis:  SEMI_LOOKS.map(l => semiSprite(...l)),
+};
+
+/* ================================================================
+   ROAD TILE  (mottled asphalt, gravel shoulders, yellow/white edge lines)
+   ================================================================ */
+const TILE_H = 640;            // multiple of the 160px dash period
+const roadTile = (() => {
+  const c = document.createElement('canvas'); c.width = W; c.height = TILE_H;
+  const g = c.getContext('2d');
+  const blotch = (x0, x1, base, light, dark, n) => {
+    g.fillStyle = base; g.fillRect(x0, 0, x1 - x0, TILE_H);
+    for (let i = 0; i < n; i++) {
+      const w = (2 + Math.floor(Math.random() * 7)) * 4, h = (2 + Math.floor(Math.random() * 9)) * 4;
+      const x = x0 + Math.floor(Math.random() * ((x1 - x0) / 4)) * 4, y = Math.floor(Math.random() * (TILE_H / 4)) * 4;
+      g.globalAlpha = 0.18 + Math.random() * 0.14; g.fillStyle = Math.random() < 0.5 ? light : dark;
+      g.fillRect(x, y, Math.min(w, x1 - x), h);
+      if (y + h > TILE_H) g.fillRect(x, y - TILE_H, Math.min(w, x1 - x), h);
+    }
+    g.globalAlpha = 1;
+    for (let i = 0; i < (x1 - x0) * 4; i++) {
+      g.globalAlpha = 0.25 + Math.random() * 0.3; g.fillStyle = Math.random() < 0.7 ? dark : light;
+      g.fillRect(x0 + Math.floor(Math.random() * ((x1 - x0) / 4)) * 4, Math.floor(Math.random() * (TILE_H / 4)) * 4, 4, 4);
+    }
+    g.globalAlpha = 1;
+  };
+  g.fillStyle = '#f1ecdc'; g.fillRect(0, 0, W, TILE_H);                  // cream outer margin
+  blotch(24, ROAD_L, '#a79f8e', '#cfc7b4', '#6f6858', 140);               // left shoulder
+  blotch(ROAD_R, 396, '#a79f8e', '#cfc7b4', '#6f6858', 140);              // right shoulder
+  blotch(ROAD_L, ROAD_R, '#b4b4b9', '#dcdce0', '#7d7d86', 520);           // asphalt
+  g.fillStyle = 'rgba(0,0,0,.18)'; g.fillRect(ROAD_L, 0, 3, TILE_H); g.fillRect(ROAD_R - 3, 0, 3, TILE_H);
+  const Y = '#f6c90e', Wt = '#fbfbfb';
+  const L = (x, w, col) => { g.fillStyle = col; g.fillRect(x, 0, w, TILE_H); };
+  L(6, 7, Y); L(13, 4, Wt); L(17, 7, Y);  L(396, 7, Y); L(403, 4, Wt); L(407, 7, Y);   // double-yellow edges
+  g.fillStyle = Y;
+  for (let k = 1; k <= 2; k++) for (let y = 0; y < TILE_H; y += 160) g.fillRect(ROAD_L + LANE_W * k - 3, y, 6, 50);  // dashed lanes
+  return c;
+})();
+
+/* ================================================================
+   STATE
+   ================================================================ */
+const stage = $('stage'), scene = $('scene'), hud = $('hud');
+const sg = scene.getContext('2d'), hg = hud.getContext('2d');
+sg.imageSmoothingEnabled = false;
+
+let mode = 'menu';              // menu | play | over
+let t = 0;                      // clock (s)
+let P, vehicles, sleep, miles, coffeeCd, speedStage, stageYd, police, toastMsg, toastT;
+let queue, lastAt, effHold, holdSrc, acc, shake, overReason, best = 0, scale = 1, floaters;
+try { best = parseFloat(localStorage.getItem('i5best') || '0') || 0; } catch (e) {}
+
+function newPlayer() { return { lane:1, laneTarget:1, x:laneX(1), pos:0, speed:60, w:34, len:8, type:'player' }; }
+
+function resetGame() {
+  P = newPlayer(); vehicles = []; sleep = 100; miles = 0; coffeeCd = 0;
+  speedStage = 0; stageYd = 0; police = null; toastMsg = ''; toastT = 0;
+  queue = []; lastAt = 0; effHold = false; holdSrc = { ptr:false, key:false };
+  acc = { semi:0, car:0, fast:0 }; shake = 0; floaters = [];
+  for (let i = 0; i < 6; i++) spawn(i < 2 ? 'semi' : 'car', rnd(30, 150));
+}
+resetGame();
+
+/* ================================================================
+   INPUT (with drowsy lag)
+   ================================================================ */
+const drowsy = () => sleep < DROWSY_AT;
+function cmd(fn) {
+  const d = drowsy() ? cfg.delay : 0;
+  if (d <= 0 && queue.length === 0) { fn(); return; }
+  lastAt = Math.max(t + d, lastAt); queue.push({ at: lastAt, fn });
+}
+function setHold(v) { cmd(() => { effHold = v; }); }
+function steer(dir) { cmd(() => { P.laneTarget = clamp(P.laneTarget + dir, 0, 2); }); }
+function refreshHold() { setHold(holdSrc.ptr || holdSrc.key); }
+function drinkCoffee() {
+  if (mode !== 'play' || coffeeCd > 0) return;
+  sleep = Math.min(100, sleep + cfg.coffee); coffeeCd = 1.5;
+  floaters.push({ txt:'+' + Math.round(cfg.coffee) + '%', t:0 });
+}
+
+let holdId = null, sx = 0;
+stage.addEventListener('pointerdown', e => {
+  if (e.target.closest('.ui') || mode !== 'play') return;
+  e.preventDefault();
+  if (holdId === null) {
+    holdId = e.pointerId; sx = e.clientX;
+    try { stage.setPointerCapture(e.pointerId); } catch (_) {}
+    holdSrc.ptr = true; refreshHold();
+  } else {                                        // second finger: tap left/right of the car to steer
+    const r = stage.getBoundingClientRect();
+    steer((e.clientX - r.left) / scale < P.x ? -1 : 1);
+  }
+});
+stage.addEventListener('pointermove', e => {
+  if (e.pointerId !== holdId) return;
+  const dx = e.clientX - sx;
+  if (Math.abs(dx) > 34 * scale) { steer(dx > 0 ? 1 : -1); sx = e.clientX; }
+});
+const release = e => { if (e.pointerId === holdId) { holdId = null; holdSrc.ptr = false; refreshHold(); } };
+['pointerup', 'pointercancel', 'lostpointercapture'].forEach(n => stage.addEventListener(n, release));
+$('coffee').addEventListener('pointerdown', e => { e.stopPropagation(); e.preventDefault(); drinkCoffee(); });
+
+window.addEventListener('keydown', e => {
+  if (e.repeat) return;
+  const k = e.key.toLowerCase();
+  if (mode !== 'play') { if (k === 'enter') startGame(); return; }
+  if (k === 'arrowleft' || k === 'a') steer(-1);
+  else if (k === 'arrowright' || k === 'd') steer(1);
+  else if (k === ' ' || k === 'arrowup' || k === 'w') { e.preventDefault(); holdSrc.key = true; refreshHold(); }
+  else if (k === 'c') drinkCoffee();
+});
+window.addEventListener('keyup', e => {
+  const k = e.key.toLowerCase();
+  if (k === ' ' || k === 'arrowup' || k === 'w') { holdSrc.key = false; if (mode === 'play') refreshHold(); }
+});
+
+/* ================================================================
+   TRAFFIC
+   ================================================================ */
+const others = v => { const a = []; for (const o of vehicles) if (o !== v && o.type !== 'police') a.push(o); a.push(P); return a; };
+const overlapLane = (a, b) => Math.min(Math.abs(a.lane - b.lane), Math.abs(a.lane - b.laneTarget),
+  Math.abs(a.laneTarget - b.lane), Math.abs(a.laneTarget - b.laneTarget)) < 0.75;
+
+function leader(v, lane, skipPlayer) {
+  const c = { lane, laneTarget: lane }; let best = null, bg = 1e9;
+  for (const o of others(v)) {
+    if (skipPlayer && o === P) continue;
+    if (o.pos <= v.pos || !overlapLane(c, o)) continue;
+    const gap = (o.pos - v.pos) - (o.len + v.len) / 2;
+    if (gap < bg) { bg = gap; best = o; }
+  }
+  return best ? { o: best, gap: bg } : null;
+}
+function clearLane(v, lane, ahead = 14, behind = 10) {
+  const c = { lane, laneTarget: lane };
+  for (const o of others(v)) {
+    if (!overlapLane(c, o)) continue;
+    const d = o.pos - v.pos, half = (o.len + v.len) / 2;
+    if (d >= 0) { if (d - half < ahead + Math.max(0, v.speed - o.speed) * 1.2) return false; }
+    else if (-d - half < behind + Math.max(0, o.speed - v.speed) * (o.type === 'fast' ? 2.2 : 1.4)) return false;
+  }
+  return true;
+}
+
+function spawn(type, forceRel) {
+  const semi = type === 'semi', fast = type === 'fast';
+  const len = semi ? 17.6 : 8;
+  const desired = fast ? FAST_SPEED : semi ? rnd(50, 60) : rnd(60, 70);
+  let lane;
+  if (fast)      lane = Math.random() < 0.55 ? Math.round(P.laneTarget) : Math.floor(rnd(0, 3));
+  else if (semi) lane = Math.random() < 0.86 ? 2 : 1;
+  else           lane = pick([0, 0, 0, 1, 1, 1, 2]);
+  let rel;
+  if (fast) rel = -rnd(500, 520);
+  else if (forceRel != null) rel = forceRel;
+  else rel = desired > P.speed + 3 ? -rnd(38, 60) : rnd(90, 150);   // faster traffic comes up from behind
+  const pos = P.pos + rel;
+  for (const o of vehicles) {
+    if (o.type === 'police') continue;
+    if (Math.abs(o.laneTarget - lane) < 0.7 && Math.abs(o.pos - pos) < (o.len + len) / 2 + 25) return false;
+  }
+  const v = { type, lane, laneTarget: lane, home: semi ? 2 : lane, pos, speed: desired, desired, len, w: semi ? 38 : 34,
+    x: laneX(lane), cd: semi && lane === 1 ? rnd(3, 8) : rnd(0, 2), tilt: 0,
+    spr: fast ? spr.fast : semi ? pick(spr.semis) : pick(spr.cars) };
+  vehicles.push(v);
+  return true;
+}
+
+function updNPC(v, dt) {
+  v.cd -= dt;
+  const settled = Math.abs(v.lane - v.laneTarget) < 0.02;
+  let L = leader(v, v.laneTarget), L2 = leader(v, Math.round(v.lane));
+  if (L2 && (!L || L2.gap < L.gap)) L = L2;
+  let tgt = v.desired;
+  if (L && L.gap < 40) tgt = Math.min(tgt, L.o.speed + (L.gap - 14) * 0.8);
+  if (settled && v.cd <= 0) {
+    if (L && L.gap < 32 && L.o.speed < v.desired - 1.5) {                // blocked: pass on the left
+      const t2 = v.laneTarget - 1;
+      if (t2 >= (v.type === 'semi' ? 1 : 0) && clearLane(v, t2)) { v.laneTarget = t2; v.cd = 2.5; }
+    } else if (v.laneTarget !== v.home) {                                  // drift back toward home lane
+      const t2 = v.laneTarget + Math.sign(v.home - v.laneTarget), Lt = leader(v, t2);
+      if (clearLane(v, t2, 22, 12) && (!Lt || Lt.gap > 35 || Lt.o.speed >= v.desired - 1)) { v.laneTarget = t2; v.cd = 2.5; }
+    }
+  }
+  v.speed += clamp(tgt - v.speed, -20 * dt, 3 * dt);
+}
+function updFast(v, dt) {
+  const L = leader(v, Math.round(v.laneTarget), true);
+  let tgt = v.desired;
+  if (L && L.gap < 45 && L.o.speed < v.speed) {
+    const prefer = [v.laneTarget - 1, v.laneTarget + 1].filter(x => x >= 0 && x <= 2).sort(a => a === Math.round(P.laneTarget) ? 1 : -1);
+    let moved = false;
+    if (Math.abs(v.lane - v.laneTarget) < 0.02) for (const l2 of prefer) if (clearLane(v, l2, 10, 5)) { v.laneTarget = l2; moved = true; break; }
+    if (!moved) tgt = Math.max(L.o.speed, 40);
+  }
+  v.speed += clamp(tgt - v.speed, -30 * dt, 10 * dt);
+}
+
+/* ================================================================
+   GAME LOOP
+   ================================================================ */
+function toast(msg) { toastMsg = msg; toastT = 2.2; }
+
+function end(msg, busted) {
+  if (mode !== 'play') return;
+  mode = 'over'; overReason = msg; shake = busted ? 0 : 0.5;
+  if (miles > best) { best = miles; try { localStorage.setItem('i5best', String(best)); } catch (e) {} }
+  $('coffee').classList.add('hidden'); $('blur').style.display = 'none';
+  const f = $('flash');
+  if (busted) { f.className = 'on'; }
+  else { f.className = 'crash'; f.style.opacity = 1; requestAnimationFrame(() => requestAnimationFrame(() => { f.style.opacity = 0; })); }
+  setTimeout(() => {
+    $('overTitle').textContent = busted ? 'BUSTED!' : 'GAME OVER';
+    $('over').classList.toggle('busted', !!busted);
+    $('overReason').textContent = msg;
+    $('overMiles').textContent = miles.toFixed(1);
+    $('overBest').textContent = 'BEST ' + best.toFixed(1) + ' MI';
+    $('over').classList.remove('hidden');
+    submitRun();
+  }, busted ? 900 : 800);
+}
+
+async function submitRun() {
+  const m = Math.floor(miles), st = $('lbStatus'), row = $('nameRow');
+  st.textContent = ''; row.classList.add('hidden');
+  if (m <= 0) { st.textContent = 'Drive at least 1 mile to post a score.'; return; }
+  let name = Leaderboard.getName();
+  if (!name) {
+    row.classList.remove('hidden'); $('nameInput').value = '';
+    $('nameSave').onclick = async () => {
+      const n = Leaderboard.cleanName($('nameInput').value); if (!n) return;
+      Leaderboard.setName(n); row.classList.add('hidden'); submitRun();
+    };
+    return;
+  }
+  st.textContent = 'Saving score...';
+  const r = await Leaderboard.submit(name, m);
+  st.textContent = r === 'saved' ? 'New personal best saved for ' + name + '!' : r === 'not-better' ? 'Not your best (' + name + ').' : r === 'denied' ? 'Leaderboard refused the score (rules need updating).' : "Couldn't reach the leaderboard.";
+}
+
+function update(dt) {
+  while (queue.length && queue[0].at <= t) queue.shift().fn();
+  const dz = drowsy(), dm = dz ? 0.75 : 1;
+
+  sleep -= cfg.drain * dt;
+  if (sleep <= 0) { sleep = 0; return end('You fell asleep at the wheel.'); }
+  coffeeCd = Math.max(0, coffeeCd - dt);
+
+  // player
+  if (effHold) P.speed += Math.max(0.6, 9 * (1 - Math.pow(P.speed / TOP_SPEED, 8))) * dm * dt;
+  else P.speed -= 7 * dt;
+  P.speed = clamp(P.speed, 15, TOP_SPEED);
+  const step = dt / (0.26 / dm);
+  const before = P.lane;
+  P.lane += clamp(P.laneTarget - P.lane, -step, step);
+  P.tilt = clamp((P.lane - before) / dt * 0.06, -0.14, 0.14);
+  P.x = laneX(P.lane);
+  P.pos += P.speed * MPH * dt;
+  miles += P.speed * dt / 3600;
+
+  // spawning
+  acc.semi += cfg.semi / 60 * dt; acc.car += cfg.car / 60 * dt; acc.fast += cfg.fast / 60 * dt;
+  for (const type of ['semi', 'car', 'fast']) {
+    if (acc[type] >= 1) {
+      if (type === 'fast') {
+        const n = vehicles.filter(v => v.type === 'fast').length;
+        if (n < 2 && P.speed < 88 && spawn('fast')) acc.fast -= 1;
+        else if (n >= 2 || P.speed >= 88) acc.fast = Math.min(acc.fast, 1);
+      } else if (spawn(type)) acc[type] -= 1; else acc[type] = Math.min(acc[type], 1.5);
+    }
+  }
+
+  // vehicles
+  for (const v of vehicles) {
+    if (v.type === 'fast') updFast(v, dt); else if (v.type !== 'police') updNPC(v, dt);
+    if (v.type !== 'police') {
+      const b = v.lane;
+      v.lane += clamp(v.laneTarget - v.lane, -dt / 1.1, dt / 1.1);
+      v.tilt = clamp((v.lane - b) / dt * 0.06, -0.12, 0.12);
+      v.x = laneX(v.lane);
+    }
+    v.pos += v.speed * MPH * dt;
+  }
+  vehicles = vehicles.filter(v => { const r = v.pos - P.pos; return v.type === 'police' ? true : v.type === 'fast' ? r < 260 : (r < 320 && r > -140); });
+
+  // collisions
+  for (const v of vehicles) {
+    if (v.type === 'police') continue;
+    const dx = Math.abs(v.x - P.x), dy = Math.abs(v.pos - P.pos) * PX;
+    if (dx < (v.w + P.w) / 2 * 0.86 && dy < (v.len + P.len) / 2 * PX * 0.92) {
+      const sameLane = Math.abs(v.lane - P.lane) < 0.45;
+      const name = v.type === 'semi' ? 'a semi truck' : 'a car';
+      if (!sameLane) return end('You sideswiped ' + name + '.');
+      if (v.pos < P.pos) return end(v.type === 'fast' ? 'A speeding car rear-ended you.' : 'You got rear-ended.');
+      return end('You rear-ended ' + name + '.');
+    }
+  }
+
+  // speeding -> cops
+  if (P.speed > SPEEDING) {
+    if (speedStage === 0) { speedStage = 1; stageYd = 0; }
+    stageYd += P.speed * MPH * dt;
+    if (speedStage === 1 && stageYd >= WARN_YD) { speedStage = 2; stageYd = 0; }
+    else if (speedStage === 2 && stageYd >= WARN_YD) {
+      speedStage = 3; stageYd = 0;
+      police = { type:'police', pos:P.pos + 260, speed:0, x:POLICE_X, len:8, w:34, lane:3, laneTarget:3 };
+      vehicles.push(police);
+    }
+  } else if (speedStage < 3) { speedStage = 0; stageYd = 0; }
+  if (speedStage === 3 && police && police.pos < P.pos) {
+    if (P.speed > SPEEDING) return end('The cop clocked you at ' + Math.round(P.speed) + ' mph.', true);
+    vehicles = vehicles.filter(v => v !== police); police = null; speedStage = 0; stageYd = 0;
+    toast('PHEW! COP LET YOU GO');
+  }
+
+  if (toastT > 0) toastT -= dt;
+  for (const f of floaters) f.t += dt;
+  floaters = floaters.filter(f => f.t < 1.2);
+  if (miles >= CITY_MILES) end('You made it to LA! Somehow awake.');
+}
+
+/* ================================================================
+   RENDER
+   ================================================================ */
+const FONT = '"Press Start 2P", ui-monospace, Menlo, monospace';
+function txt(g, s, x, y, size, col, align = 'left', stroke = '#000') {
+  g.font = size + 'px ' + FONT; g.textAlign = align; g.textBaseline = 'alphabetic';
+  g.lineWidth = Math.max(3, size / 4); g.strokeStyle = stroke; g.lineJoin = 'round';
+  g.strokeText(s, x, y); g.fillStyle = col; g.fillText(s, x, y);
+}
+function rrect(g, x, y, w, h, r) {
+  g.beginPath(); g.moveTo(x + r, y); g.arcTo(x + w, y, x + w, y + h, r); g.arcTo(x + w, y + h, x, y + h, r);
+  g.arcTo(x, y + h, x, y, r); g.arcTo(x, y, x + w, y, r); g.closePath();
+}
+const sy = o => PLAYER_Y - (o.pos - P.pos) * PX;
+
+function drawVehicle(v, isPlayer) {
+  const img = v.spr || spr.player;
+  const x = isPlayer ? P.x : v.x, y = isPlayer ? PLAYER_Y : sy(v);
+  if (y < -120 || y > H + 120) return;
+  sg.save(); sg.translate(x, y); sg.rotate(v.tilt || 0);
+  sg.fillStyle = 'rgba(0,0,0,.22)'; sg.fillRect(-img.width / 2 + 4, -img.height / 2 + 5, img.width - 2, img.height);
+  if (v.type === 'fast' && Math.floor(t * 3) % 2 === 0) {       // flashing high beams
+    const gr = sg.createLinearGradient(0, -img.height / 2, 0, -img.height / 2 - 120);
+    gr.addColorStop(0, 'rgba(255,255,220,.55)'); gr.addColorStop(1, 'rgba(255,255,220,0)');
+    sg.fillStyle = gr; sg.beginPath(); sg.moveTo(-14, -img.height / 2); sg.lineTo(14, -img.height / 2);
+    sg.lineTo(46, -img.height / 2 - 120); sg.lineTo(-46, -img.height / 2 - 120); sg.fill();
+  }
+  const imgToDraw = isPlayer ? spr.player : (v.type === 'police' ? spr.police : img);
+  sg.drawImage(imgToDraw, -imgToDraw.width / 2, -imgToDraw.height / 2);
+  if (v.type === 'police') {                                      // light bar
+    const a = Math.floor(t * 6) % 2;
+    sg.fillStyle = a ? '#ff2a2a' : '#2a5bff'; sg.fillRect(-14, -4, 12, 6);
+    sg.fillStyle = a ? '#2a5bff' : '#ff2a2a'; sg.fillRect(2, -4, 12, 6);
+    sg.fillStyle = a ? 'rgba(255,40,40,.25)' : 'rgba(40,90,255,.25)'; sg.beginPath(); sg.arc(0, 0, 44, 0, 7); sg.fill();
+  }
+  sg.restore();
+}
+
+function renderScene() {
+  sg.save();
+  if (shake > 0) sg.translate(rnd(-5, 5) * shake * 2, rnd(-5, 5) * shake * 2);
+  const off = (P.pos * PX) % TILE_H;
+  for (let y = off - TILE_H; y < H + 10; y += TILE_H) sg.drawImage(roadTile, 0, Math.round(y));
+  const list = vehicles.slice().sort((a, b) => a.pos - b.pos);
+  for (const v of list) drawVehicle(v, false);
+  drawVehicle(P, true);
+  sg.restore();
+}
+
+function dist10(d) { return d > 100 ? Math.round(d / 10) * 10 : Math.round(d / 5) * 5; }
+
+function bubble(x, label, hot, alpha) {
+  const w = 108, h = 50, y = 598, x0 = x - w / 2;
+  hg.save(); hg.globalAlpha = alpha;
+  hg.fillStyle = K; hg.beginPath(); hg.moveTo(x - 11, y + h - 2); hg.lineTo(x + 11, y + h - 2); hg.lineTo(x, y + h + 18); hg.fill();
+  hg.fillStyle = hot ? '#ff4a3a' : '#fff4c2'; hg.beginPath(); hg.moveTo(x - 7, y + h - 2); hg.lineTo(x + 7, y + h - 2); hg.lineTo(x, y + h + 11); hg.fill();
+  rrect(hg, x0, y, w, h, 10); hg.fillStyle = K; hg.fill();
+  rrect(hg, x0 + 3, y + 3, w - 6, h - 6, 8); hg.fillStyle = hot ? '#ff4a3a' : '#fff4c2'; hg.fill();
+  hg.imageSmoothingEnabled = false; hg.drawImage(spr.fast, x0 + 9, y + 6, 17, 38);
+  txt(hg, label, x0 + 32, y + 32, 12, hot ? '#fff' : '#111', 'left', hot ? '#000' : 'rgba(0,0,0,0)');
+  hg.restore();
+}
+
+function renderHUD() {
+  hg.clearRect(0, 0, W, H);
+
+  // drowsy eyelids
+  if (sleep < 14) {
+    const a = Math.pow(Math.sin(t * 1.1) * 0.5 + 0.5, 3) * (1 - sleep / 14);
+    const lh = a * H * 0.36;
+    if (lh > 2) {
+      let g = hg.createLinearGradient(0, 0, 0, lh); g.addColorStop(0, '#000'); g.addColorStop(0.8, 'rgba(0,0,0,.9)'); g.addColorStop(1, 'rgba(0,0,0,0)');
+      hg.fillStyle = g; hg.fillRect(0, 0, W, lh);
+      g = hg.createLinearGradient(0, H, 0, H - lh); g.addColorStop(0, '#000'); g.addColorStop(0.8, 'rgba(0,0,0,.9)'); g.addColorStop(1, 'rgba(0,0,0,0)');
+      hg.fillStyle = g; hg.fillRect(0, H - lh, W, lh);
+    }
+  }
+
+  // miles (top-left)
+  rrect(hg, 8, 10, 150, 56, 6); hg.fillStyle = 'rgba(10,12,20,.78)'; hg.fill();
+  txt(hg, 'MILES', 18, 28, 8, '#f6c90e'); txt(hg, miles.toFixed(1), 18, 52, 18, '#fff');
+  txt(hg, 'BEST ' + best.toFixed(1), 98, 28, 7, '#9aa0b8', 'left', 'rgba(0,0,0,0)');
+
+  // speedometer (top-right)
+  const sp = Math.round(P.speed), over = P.speed > SPEEDING;
+  rrect(hg, 296, 10, 116, 62, 6); hg.fillStyle = 'rgba(10,12,20,.8)'; hg.fill();
+  hg.lineWidth = 3; hg.strokeStyle = over && Math.floor(t * 4) % 2 ? '#ff3a2a' : '#f6c90e'; hg.stroke();
+  txt(hg, String(sp), 380, 48, 28, over ? '#ff5a4a' : sp > 80 ? '#ffd23a' : '#fff', 'right');
+  txt(hg, 'MPH', 380, 64, 9, '#f6c90e', 'right');
+  hg.fillStyle = '#222'; hg.fillRect(308, 58, 60, 5);
+  hg.fillStyle = over ? '#ff3a2a' : '#4ade80'; hg.fillRect(308, 58, 60 * (P.speed / TOP_SPEED), 5);
+
+  // sleep meter (right edge)
+  const mx = 398, my = 124, mw = 16, mh = 340;
+  const col = sleep > 50 ? '#4ade80' : sleep > DROWSY_AT ? '#ffd23a' : (Math.floor(t * 4) % 2 ? '#ff3a2a' : '#a01810');
+  hg.fillStyle = K; hg.fillRect(mx - 3, my - 3, mw + 6, mh + 6);
+  hg.fillStyle = '#2a2a33'; hg.fillRect(mx, my, mw, mh);
+  const fh = mh * sleep / 100; hg.fillStyle = col; hg.fillRect(mx, my + mh - fh, mw, fh);
+  hg.fillStyle = 'rgba(255,255,255,.35)'; hg.fillRect(mx + 2, my + mh - fh, 3, fh);
+  hg.fillStyle = '#fff'; hg.fillRect(mx - 5, my + mh * (1 - DROWSY_AT / 100) - 1, mw + 10, 2);
+  // little eye icon + %
+  hg.fillStyle = K; hg.fillRect(mx - 1, my - 28, 18, 12); hg.fillStyle = '#fff'; hg.fillRect(mx + 1, my - 26, 14, 8);
+  hg.fillStyle = sleep < DROWSY_AT ? '#ff3a2a' : '#243c4a'; hg.fillRect(mx + 5, my - 26, 6, 8);
+  if (sleep < DROWSY_AT) { hg.fillStyle = K; hg.fillRect(mx + 1, my - 26, 14, 4); }
+  txt(hg, Math.ceil(sleep) + '%', mx + 8, my + mh + 20, 8, '#fff', 'center');
+
+  // warnings
+  let wy = 100;
+  const fl = Math.floor(t * 3) % 2 === 0;
+  if (speedStage > 0) {
+    let l1 = 'SLOW DOWN', l2 = '';
+    if (speedStage === 1) l2 = 'COP RADAR IN ' + Math.max(0, Math.ceil((WARN_YD - stageYd) / 10) * 10) + ' YD';
+    else if (speedStage === 2) { l1 = 'SLOW DOWN'; l2 = 'POLICE AHEAD  ' + Math.max(0, Math.ceil((WARN_YD - stageYd) / 10) * 10) + ' YD'; }
+    else if (police) l2 = 'POLICE ' + Math.max(0, dist10((police.pos - P.pos))) + ' YD';
+    hg.fillStyle = fl ? 'rgba(210,20,20,.92)' : 'rgba(255,200,0,.92)'; rrect(hg, 40, wy, 300, speedStage > 1 ? 64 : 52, 6); hg.fill();
+    txt(hg, speedStage === 2 ? 'SLOW DOWN, POLICE AHEAD' : l1, 190, wy + 24, speedStage === 2 ? 13 : 20, fl ? '#fff' : '#000', 'center', fl ? '#000' : 'rgba(0,0,0,0)');
+    if (l2) txt(hg, l2, 190, wy + (speedStage === 2 ? 50 : 42), 9, fl ? '#fff' : '#000', 'center', fl ? '#000' : 'rgba(0,0,0,0)');
+    wy += speedStage > 1 ? 76 : 64;
+  }
+
+  // fast cars: banner + speech bubbles
+  let nearest = null;
+  for (const v of vehicles) if (v.type === 'fast' && v.pos < P.pos) { if (!nearest || v.pos > nearest.pos) nearest = v; }
+  for (const v of vehicles) {
+    if (v.type !== 'fast') continue;
+    const rel = P.pos - v.pos;
+    if (rel < 0) continue;
+    const hot = Math.abs(Math.round(v.laneTarget) - Math.round(P.laneTarget)) === 0 || Math.abs(v.lane - P.lane) < 0.9;
+    const a = clamp((rel - 20) / 6, 0, 1);
+    if (a > 0 && rel < 520) bubble(v.x, dist10(rel) + ' YD', hot && fl, a);
+  }
+  if (nearest) {
+    const rel = P.pos - nearest.pos, ln = clamp(Math.round(nearest.lane), 0, 2), pl = Math.round(P.laneTarget);
+    if (rel > 16) {
+      let adv = '';
+      if (ln === pl) adv = ln === 0 ? 'MOVE RIGHT!' : ln === 2 ? 'MOVE LEFT!' : 'MOVE LEFT OR RIGHT!';
+      hg.fillStyle = 'rgba(10,12,20,.85)'; rrect(hg, 24, wy, 316, adv ? 66 : 44, 6); hg.fill();
+      txt(hg, 'CAR APPROACHING ' + LANE_NAMES[ln] + ' LANE', 182, wy + 20, 9, '#fff', 'center');
+      if (adv) txt(hg, adv, 182, wy + 50, 15, fl ? '#ff5a4a' : '#ffd23a', 'center');
+      else txt(hg, dist10(rel) + ' YD', 182, wy + 37, 8, '#9aa0b8', 'center', 'rgba(0,0,0,0)');
+    }
+  }
+
+  // drowsy hint + toast + floaters
+  if (sleep < DROWSY_AT && Math.floor(t * 2.5) % 2 === 0) txt(hg, 'DROWSY! COFFEE >', 270, 668, 9, '#ff5a4a', 'right');
+  if (toastT > 0) txt(hg, toastMsg, 190, 360, 11, '#fff', 'center');
+  for (const f of floaters) txt(hg, f.txt, 380 - f.t * 10, 120 - f.t * 30, 11, '#4ade80', 'right');
+}
+
+function renderMenuHUD() { hg.clearRect(0, 0, W, H); }
+
+/* ================================================================
+   MAIN LOOP + UI
+   ================================================================ */
+let last = 0;
+function frame(ts) {
+  const dt = Math.min(0.05, (ts - last) / 1000 || 0); last = ts; t += dt;
+  if (mode === 'play') update(dt);
+  else if (mode === 'menu') { P.pos += 38 * MPH * dt; }
+  if (shake > 0) shake = Math.max(0, shake - dt);
+  renderScene();
+  if (mode === 'menu') renderMenuHUD(); else renderHUD();
+  // drowsy blur + coffee button state
+  const blur = $('blur');
+  if (mode === 'play' && drowsy()) {
+    const b = Math.round(2 + (1 - sleep / DROWSY_AT) * 9);
+    if (blur.dataset.b !== String(b)) { blur.style.setProperty('--b', b + 'px'); blur.dataset.b = String(b); }
+    blur.style.display = 'block';
+  } else blur.style.display = 'none';
+  const cb = $('coffee');
+  cb.classList.toggle('cd', coffeeCd > 0);
+  cb.classList.toggle('pulse', mode === 'play' && drowsy() && coffeeCd <= 0);
+  requestAnimationFrame(frame);
+}
+
+function layout() {
+  scale = Math.min(innerWidth / W, innerHeight / H);
+  stage.style.width = W * scale + 'px'; stage.style.height = H * scale + 'px';
+  stage.style.fontSize = (10 * scale) + 'px';
+}
+addEventListener('resize', layout); layout();
+
+function startGame() {
+  resetGame(); holdId = null;
+  mode = 'play';
+  ['menu', 'over', 'tune'].forEach(id => $(id).classList.add('hidden'));
+  $('flash').className = ''; $('coffee').classList.remove('hidden');
+}
+function showMenu() { resetGame(); mode = 'menu'; $('over').classList.add('hidden'); $('flash').className = ''; $('menu').classList.remove('hidden'); }
+
+$('startBtn').onclick = startGame;
+$('againBtn').onclick = startGame;
+$('menuBtn').onclick = showMenu;
+
+// tuning panel
+function buildTune() {
+  const box = $('tuneRows'); box.innerHTML = '';
+  for (const d of TUNING) {
+    const row = document.createElement('div'); row.className = 'row';
+    row.innerHTML = '<label><span>' + d.label + '</span><b></b></label><input type="range" min="' + d.min + '" max="' + d.max + '" step="' + d.step + '">';
+    const inp = row.querySelector('input'), val = row.querySelector('b');
+    inp.value = cfg[d.k]; val.textContent = cfg[d.k];
+    inp.addEventListener('input', () => { cfg[d.k] = parseFloat(inp.value); val.textContent = cfg[d.k]; saveCfg(); });
+    box.appendChild(row);
+  }
+}
+let tuneFrom = 'menu';
+$('tuneBtn').onclick = () => { tuneFrom = 'menu'; buildTune(); $('menu').classList.add('hidden'); $('tune').classList.remove('hidden'); };
+$('tuneDone').onclick = () => { $('tune').classList.add('hidden'); $('menu').classList.remove('hidden'); };
+$('tuneReset').onclick = () => { cfg = { ...DEFAULTS }; saveCfg(); buildTune(); };
+$('menuBtn').onclick = () => { showMenu(); };
+
+requestAnimationFrame(frame);
+
+window.__i5 = { get state() { return { mode, P, vehicles, sleep, miles, speedStage, stageYd }; }, set sleep(v) { sleep = v; }, spawn, end, update, setSpeed(v){ P.speed = v; }, startGame, cfg, set stage(v){ speedStage=v; } };
+})();
+</script>
+</body>
+</html>

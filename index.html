@@ -500,16 +500,16 @@
       <div class="lb-tabs" id="leaderboard-tabs" role="tablist">
         <button class="lb-tab" role="tab" data-tab="classic">Classic</button>
         <button class="lb-tab" role="tab" data-tab="fullrecall">Perfect Recall</button>
-        <button class="lb-tab" role="tab" data-tab="veracruz">Road to Veracruz</button>
+        <button class="lb-tab" role="tab" data-tab="drivingi5">Driving I5</button>
       </div>
       <ul id="leaderboard-list"></ul>
       <div class="lb-foot" id="leaderboard-note"></div>
       <div class="lb-foot" id="leaderboard-player"></div>
     </div>
-    <a class="game-widget" href="spikey-road/index.html">
+    <a class="game-widget" href="driving-i5/index.html">
       <span class="game-widget-label">More games</span>
-      <span class="game-widget-title">Road to Veracruz</span>
-      <span class="game-widget-sub">A spikey desert adventure</span>
+      <span class="game-widget-title">Driving I5</span>
+      <span class="game-widget-sub">Stay awake on the long drive from SF to LA</span>
     </a>
   </section>
 
@@ -1737,8 +1737,8 @@
     const playerEl = document.getElementById("leaderboard-player");
 
     await appState.pendingSubmit.catch(() => {});
-    // Three tabs: Classic and Full Recall list one row per difficulty; Road to Veracruz has a single
-    // row (its scores are stored in the same database under "veracruz", in metres).
+    // Three tabs: Classic and Full Recall list one row per difficulty; Driving I5 has a single
+    // row (its scores are stored in the same database under "drivingi5", in whole miles).
     const tab = appState.leaderboardTab;
     document.querySelectorAll("#leaderboard-tabs .lb-tab").forEach(btn => {
       const active = btn.dataset.tab === tab;
@@ -1746,8 +1746,8 @@
       btn.setAttribute("aria-selected", String(active));
     });
     let rows;
-    if (tab === "veracruz") {
-      rows = [{ key: "veracruz", label: "Best distance", unit: " m" }];
+    if (tab === "drivingi5") {
+      rows = [{ key: "drivingi5", label: "Best distance", unit: " mi" }];
     } else {
       const modes = tab === "fullrecall" ? FULL_RECALL_MODES : MODES;
       rows = Object.values(modes).map(m => ({ key: m.name, label: m.label.replace(/^Perfect Recall /, ""), unit: "" }));

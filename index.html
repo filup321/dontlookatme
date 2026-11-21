@@ -1608,8 +1608,10 @@
   // ---- Share your score ----
 
   function prepareShare(streak, buttonId) {
-    const modeName = appState.mode.variant === "fullrecall" ? appState.mode.label : "Classic " + appState.mode.label;
-    appState.shareText = `I got a streak of ${streak} on ${modeName} in Memory Game! Can you beat it?`;
+    const isPR = appState.mode.variant === "fullrecall";
+    const game = isPR ? "Perfect Recall" : "Classic";
+    const difficulty = appState.mode.label.replace(/^Perfect Recall /, "");
+    appState.shareText = `I got a streak of ${streak} on ${game} on ${difficulty} difficulty in Memory Game! Can you beat it?`;
     const btn = document.getElementById(buttonId);
     btn.style.display = streak > 0 ? "" : "none"; // nothing worth sharing at 0
     btn.textContent = "Share your score";

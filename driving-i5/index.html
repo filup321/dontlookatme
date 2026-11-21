@@ -108,6 +108,7 @@
       <button id="nameSave" class="btn alt" style="font-size:.8em">SAVE</button>
     </div>
     <p id="lbStatus" style="font-size:.6em;opacity:.8;min-height:1.5em"></p>
+    <button id="shareBtn" class="btn alt hidden" style="font-size:.8em">SHARE YOUR SCORE</button>
     <button id="againBtn" class="btn">DRIVE AGAIN</button>
     <button id="menuBtn" class="btn alt">MENU / TUNING</button>
   </div>
@@ -449,8 +450,21 @@ function end(msg, busted) {
   }, busted ? 900 : 800);
 }
 
+let shareText = '';
+$('shareBtn').onclick = async () => {
+  const btn = $('shareBtn'), url = location.origin + location.pathname.replace(/index\.html$/, '');
+  if (navigator.share) {
+    try { await navigator.share({ title: 'Driving I5', text: shareText, url }); return; }
+    catch (e) { if (e && e.name === 'AbortError') return; }
+  }
+  const full = shareText + ' ' + url;
+  try { await navigator.clipboard.writeText(full); btn.textContent = 'COPIED TO CLIPBOARD!'; setTimeout(() => { btn.textContent = 'SHARE YOUR SCORE'; }, 2000); }
+  catch (e) { window.prompt('Copy this to share your score:', full); }
+};
 async function submitRun() {
   const m = Math.floor(miles), st = $('lbStatus'), row = $('nameRow');
+  const sb = $('shareBtn'); sb.textContent = 'SHARE YOUR SCORE'; sb.classList.toggle('hidden', m <= 0);
+  shareText = 'I just drove ' + m + ' mile' + (m === 1 ? '' : 's') + ' on the I5 without crashing or getting pulled over. Can you beat it?';
   st.textContent = ''; row.classList.add('hidden');
   if (m <= 0) { st.textContent = 'Drive at least 1 mile to post a score.'; return; }
   let name = Leaderboard.getName();

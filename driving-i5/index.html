@@ -53,8 +53,6 @@
   #over .big { font-size:2.3em; margin:.2em 0 .5em; color:#ff5a4a; text-shadow:.12em .12em 0 #000; }
   #over.busted .big { animation:txt .5s steps(1) infinite; }
   @keyframes txt { 0%{color:#4a7bff} 50%{color:#ff4a4a} }
-  #tune { top:4em; bottom:4em; overflow:auto; text-align:left; touch-action:pan-y; }
-  #tune h2 { text-align:center; }
   .row { margin:.9em 0; font-size:.8em; }
   .row label { display:flex; justify-content:space-between; margin-bottom:.4em; }
   .row label b { color:var(--yellow); font-weight:normal; }
@@ -85,15 +83,16 @@
     <ul>
       <li><b>HOLD</b> screen = gas</li>
       <li><b>SWIPE</b> &larr; &rarr; = change lane</li>
+      <li><b>SWIPE</b> &darr; = brake</li>
+      <li><b>SWIPE</b> across screen = 2 lanes</li>
       <li><b>TAP</b> COFFEE = wake up</li>
       <li><b>DON'T</b> rear-end anything</li>
       <li><b>MOVE OVER</b> for speeders</li>
       <li><b>90+ MPH</b> = cops</li>
     </ul>
     <button id="startBtn" class="btn">START</button>
-    <button id="tuneBtn" class="btn alt">TUNING</button>
     <a href="../index.html" class="btn alt" style="text-decoration:none;text-align:center;font-size:.75em">&larr; MEMORY GAME</a>
-    <p style="font-size:.55em;opacity:.7;margin-top:1.4em">Desktop: SPACE gas, &larr;/&rarr; steer, C coffee</p>
+    <p style="font-size:.55em;opacity:.7;margin-top:1.4em">Desktop: SPACE gas, &darr; brake, &larr;/&rarr; steer, C coffee</p>
   </div>
 
   <div id="over" class="panel ui hidden">
@@ -110,16 +109,8 @@
     <p id="lbStatus" style="font-size:.6em;opacity:.8;min-height:1.5em"></p>
     <button id="shareBtn" class="btn alt hidden" style="font-size:.8em">SHARE YOUR SCORE</button>
     <button id="againBtn" class="btn">DRIVE AGAIN</button>
-    <button id="menuBtn" class="btn alt">MENU / TUNING</button>
+    <button id="menuBtn" class="btn alt">MENU</button>
   </div>
-
-  <div id="tune" class="panel ui hidden">
-    <h2>TUNING</h2>
-    <div id="tuneRows"></div>
-    <button id="tuneReset" class="btn alt">RESET DEFAULTS</button>
-    <button id="tuneDone" class="btn">DONE</button>
-  </div>
-</div>
 
 <script src="leaderboard.js"></script>
 <script>
@@ -141,20 +132,15 @@ const DROWSY_AT = 25;           // % sleepiness below which you get drowsy
 const FAST_SPEED = 95;
 const POLICE_X = 372;
 const CITY_MILES = 383;
+const LANE_SPEEDS = [[70, 85], [60, 70], [50, 60]];   // mph for cars by lane: left (fast), middle, right (slow)
+const MIN_SPAWN_GAP = 40;       // yards of clear road needed to spawn behind/ahead of another vehicle in the lane
+const NEAR_WIN = [-25, 70], NEAR_MAX = 1;      // max vehicles per lane around the screen
+const WIDE_WIN = [-60, 180], WIDE_MAX = 3;     // max vehicles per lane in the wider area
+const COAST_DECEL = 7;          // mph/sec lost when you let off the gas
+const BRAKE_MULT = 2.5;         // braking slows you 2.5x faster than coasting
 
-/* Tunable from the TUNING screen (saved in this browser) */
-const DEFAULTS = { semi: 7, car: 12, fast: 2.5, drain: 1.2, coffee: 35, delay: 0.30 };
-const TUNING = [
-  { k:'semi',   label:'SEMI TRUCKS / MIN', min:0,   max:30, step:0.5 },
-  { k:'car',    label:'SLOW CARS / MIN',   min:0,   max:40, step:0.5 },
-  { k:'fast',   label:'FAST CARS / MIN',   min:0,   max:10, step:0.5 },
-  { k:'drain',  label:'SLEEP DRAIN %/SEC', min:0.2, max:4,  step:0.1 },
-  { k:'coffee', label:'COFFEE BOOST %',    min:10,  max:60, step:5 },
-  { k:'delay',  label:'DROWSY LAG (SEC)',  min:0,   max:0.8,step:0.05 },
-];
-let cfg = { ...DEFAULTS };
-try { Object.assign(cfg, JSON.parse(localStorage.getItem('i5cfg') || '{}')); } catch (e) {}
-const saveCfg = () => { try { localStorage.setItem('i5cfg', JSON.stringify(cfg)); } catch (e) {} };
+/* Game balance (traffic per minute, sleep drain %/sec, coffee boost %, drowsy input lag in sec) */
+const cfg = { semi: 7, car: 12, fast: 2.5, drain: 1.2, coffee: 35, delay: 0.30 };
 
 const $ = id => document.getElementById(id);
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
@@ -276,7 +262,7 @@ sg.imageSmoothingEnabled = false;
 let mode = 'menu';              // menu | play | over
 let t = 0;                      // clock (s)
 let P, vehicles, sleep, miles, coffeeCd, speedStage, stageYd, police, toastMsg, toastT;
-let queue, lastAt, effHold, holdSrc, acc, shake, overReason, best = 0, scale = 1, floaters;
+let queue, lastAt, effHold, effBrake, holdSrc, acc, shake, overReason, best = 0, scale = 1, floaters;
 try { best = parseFloat(localStorage.getItem('i5best') || '0') || 0; } catch (e) {}
 
 function newPlayer() { return { lane:1, laneTarget:1, x:laneX(1), pos:0, speed:60, w:34, len:8, type:'player' }; }
@@ -284,7 +270,7 @@ function newPlayer() { return { lane:1, laneTarget:1, x:laneX(1), pos:0, speed:6
 function resetGame() {
   P = newPlayer(); vehicles = []; sleep = 100; miles = 0; coffeeCd = 0;
   speedStage = 0; stageYd = 0; police = null; toastMsg = ''; toastT = 0;
-  queue = []; lastAt = 0; effHold = false; holdSrc = { ptr:false, key:false };
+  queue = []; lastAt = 0; effHold = false; effBrake = false; holdSrc = { ptr:false, key:false, brakeP:false, brakeK:false };
   acc = { semi:0, car:0, fast:0 }; shake = 0; floaters = [];
   for (let i = 0; i < 6; i++) spawn(i < 2 ? 'semi' : 'car', rnd(30, 150));
 }
@@ -302,18 +288,20 @@ function cmd(fn) {
 function setHold(v) { cmd(() => { effHold = v; }); }
 function steer(dir) { cmd(() => { P.laneTarget = clamp(P.laneTarget + dir, 0, 2); }); }
 function refreshHold() { setHold(holdSrc.ptr || holdSrc.key); }
+function refreshBrake() { const v = holdSrc.brakeP || holdSrc.brakeK; cmd(() => { effBrake = v; }); }
 function drinkCoffee() {
   if (mode !== 'play' || coffeeCd > 0) return;
   sleep = Math.min(100, sleep + cfg.coffee); coffeeCd = 1.5;
   floaters.push({ txt:'+' + Math.round(cfg.coffee) + '%', t:0 });
 }
 
-let holdId = null, sx = 0;
+let holdId = null, sx = 0, sy0 = 0, swipeSteps = 0, swipeDir = 0;
+const BRAKE_ON_PX = 40, BRAKE_OFF_PX = 22, LANE_SWIPE_PX = 34;
 stage.addEventListener('pointerdown', e => {
   if (e.target.closest('.ui') || mode !== 'play') return;
   e.preventDefault();
   if (holdId === null) {
-    holdId = e.pointerId; sx = e.clientX;
+    holdId = e.pointerId; sx = e.clientX; sy0 = e.clientY; swipeSteps = 0; swipeDir = 0;
     try { stage.setPointerCapture(e.pointerId); } catch (_) {}
     holdSrc.ptr = true; refreshHold();
   } else {                                        // second finger: tap left/right of the car to steer
@@ -323,10 +311,23 @@ stage.addEventListener('pointerdown', e => {
 });
 stage.addEventListener('pointermove', e => {
   if (e.pointerId !== holdId) return;
-  const dx = e.clientX - sx;
-  if (Math.abs(dx) > 34 * scale) { steer(dx > 0 ? 1 : -1); sx = e.clientX; }
+  // Swipe down = brake (stays on until the finger comes back up or lifts)
+  const dy = e.clientY - sy0;
+  if (!holdSrc.brakeP && dy > BRAKE_ON_PX * scale) { holdSrc.brakeP = true; refreshBrake(); }
+  else if (holdSrc.brakeP && dy < BRAKE_OFF_PX * scale) { holdSrc.brakeP = false; refreshBrake(); }
+  // Swipe sideways = 1 lane; swiping about 2/3 of the screen width (the whole road) = 2 lanes
+  const dx = e.clientX - sx, ax = Math.abs(dx), sign = dx > 0 ? 1 : -1;
+  const twoLane = (W * scale) * (2 / 3);
+  if (swipeSteps === 0 && ax > LANE_SWIPE_PX * scale) { steer(sign); swipeDir = sign; swipeSteps = 1; }
+  else if (swipeSteps === 1 && sign === swipeDir && ax >= twoLane) { steer(sign); swipeSteps = 2; }
+  else if (swipeSteps > 0 && sign !== swipeDir && ax > LANE_SWIPE_PX * scale) {   // reversed direction: start a new swipe
+    steer(sign); swipeDir = sign; swipeSteps = 1; sx = e.clientX - sign * LANE_SWIPE_PX * scale;
+  }
 });
-const release = e => { if (e.pointerId === holdId) { holdId = null; holdSrc.ptr = false; refreshHold(); } };
+const release = e => {
+  if (e.pointerId !== holdId) return;
+  holdId = null; holdSrc.ptr = false; holdSrc.brakeP = false; refreshHold(); refreshBrake();
+};
 ['pointerup', 'pointercancel', 'lostpointercapture'].forEach(n => stage.addEventListener(n, release));
 $('coffee').addEventListener('pointerdown', e => { e.stopPropagation(); e.preventDefault(); drinkCoffee(); });
 
@@ -337,11 +338,13 @@ window.addEventListener('keydown', e => {
   if (k === 'arrowleft' || k === 'a') steer(-1);
   else if (k === 'arrowright' || k === 'd') steer(1);
   else if (k === ' ' || k === 'arrowup' || k === 'w') { e.preventDefault(); holdSrc.key = true; refreshHold(); }
+  else if (k === 'arrowdown' || k === 's') { e.preventDefault(); holdSrc.brakeK = true; refreshBrake(); }
   else if (k === 'c') drinkCoffee();
 });
 window.addEventListener('keyup', e => {
   const k = e.key.toLowerCase();
   if (k === ' ' || k === 'arrowup' || k === 'w') { holdSrc.key = false; if (mode === 'play') refreshHold(); }
+  if (k === 'arrowdown' || k === 's') { holdSrc.brakeK = false; if (mode === 'play') refreshBrake(); }
 });
 
 /* ================================================================
@@ -372,14 +375,26 @@ function clearLane(v, lane, ahead = 14, behind = 10) {
   return true;
 }
 
+function laneCount(lane, lo, hi) {
+  let n = 0;
+  for (const o of vehicles) {
+    if (o.type === 'police' || o.type === 'fast' || Math.abs(o.laneTarget - lane) >= 0.7) continue;
+    const r = o.pos - P.pos;
+    if (r >= lo && r <= hi) n++;
+  }
+  return n;
+}
+
 function spawn(type, forceRel) {
   const semi = type === 'semi', fast = type === 'fast';
   const len = semi ? 17.6 : 8;
-  const desired = fast ? FAST_SPEED : semi ? rnd(50, 60) : rnd(60, 70);
   let lane;
   if (fast)      lane = Math.random() < 0.55 ? Math.round(P.laneTarget) : Math.floor(rnd(0, 3));
   else if (semi) lane = Math.random() < 0.86 ? 2 : 1;
   else           lane = pick([0, 0, 0, 1, 1, 1, 2]);
+  // Speed depends on the lane: left = fast lane, right = slow lane. Semis always 50-60.
+  const band = LANE_SPEEDS[lane];
+  const desired = fast ? FAST_SPEED : semi ? rnd(50, 60) : rnd(band[0], band[1]);
   let rel;
   if (fast) rel = -rnd(500, 520);
   else if (forceRel != null) rel = forceRel;
@@ -387,8 +402,10 @@ function spawn(type, forceRel) {
   const pos = P.pos + rel;
   for (const o of vehicles) {
     if (o.type === 'police') continue;
-    if (Math.abs(o.laneTarget - lane) < 0.7 && Math.abs(o.pos - pos) < (o.len + len) / 2 + 25) return false;
+    if (Math.abs(o.laneTarget - lane) < 0.7 && Math.abs(o.pos - pos) < (o.len + len) / 2 + (fast ? 25 : MIN_SPAWN_GAP)) return false;
   }
+  // Anti-gridlock: don't let any one lane fill up (rolling cap, so jams stay short)
+  if (!fast && (laneCount(lane, NEAR_WIN[0], NEAR_WIN[1]) >= NEAR_MAX || laneCount(lane, WIDE_WIN[0], WIDE_WIN[1]) >= WIDE_MAX)) return false;
   const v = { type, lane, laneTarget: lane, home: semi ? 2 : lane, pos, speed: desired, desired, len, w: semi ? 38 : 34,
     x: laneX(lane), cd: semi && lane === 1 ? rnd(3, 8) : rnd(0, 2), tilt: 0,
     spr: fast ? spr.fast : semi ? pick(spr.semis) : pick(spr.cars) };
@@ -454,7 +471,7 @@ let shareText = '';
 $('shareBtn').onclick = async () => {
   const btn = $('shareBtn'), url = location.origin + location.pathname.replace(/index\.html$/, '');
   if (navigator.share) {
-    try { await navigator.share({ title: 'Driving I5', text: shareText, url }); return; }
+    try { await navigator.share({ title: 'Driving I5', text: shareText + ' ' + url }); return; }   // one string: some iPhone share targets drop text when a separate url is given
     catch (e) { if (e && e.name === 'AbortError') return; }
   }
   const full = shareText + ' ' + url;
@@ -490,8 +507,9 @@ function update(dt) {
   coffeeCd = Math.max(0, coffeeCd - dt);
 
   // player
-  if (effHold) P.speed += Math.max(0.6, 9 * (1 - Math.pow(P.speed / TOP_SPEED, 8))) * dm * dt;
-  else P.speed -= 7 * dt;
+  if (effBrake) P.speed -= COAST_DECEL * BRAKE_MULT * dt;                       // braking beats gas
+  else if (effHold) P.speed += Math.max(0.6, 9 * (1 - Math.pow(P.speed / TOP_SPEED, 8))) * dm * dt;
+  else P.speed -= COAST_DECEL * dt;
   P.speed = clamp(P.speed, 15, TOP_SPEED);
   const step = dt / (0.26 / dm);
   const before = P.lane;
@@ -524,7 +542,7 @@ function update(dt) {
     }
     v.pos += v.speed * MPH * dt;
   }
-  vehicles = vehicles.filter(v => { const r = v.pos - P.pos; return v.type === 'police' ? true : v.type === 'fast' ? r < 260 : (r < 320 && r > -140); });
+  vehicles = vehicles.filter(v => { const r = v.pos - P.pos; return v.type === 'police' ? true : v.type === 'fast' ? r < 260 : (r < 230 && r > -110); });
 
   // collisions
   for (const v of vehicles) {
@@ -589,6 +607,7 @@ function drawVehicle(v, isPlayer) {
     sg.fillStyle = gr; sg.beginPath(); sg.moveTo(-14, -img.height / 2); sg.lineTo(14, -img.height / 2);
     sg.lineTo(46, -img.height / 2 - 120); sg.lineTo(-46, -img.height / 2 - 120); sg.fill();
   }
+  if (isPlayer && effBrake) { sg.fillStyle = 'rgba(255,40,30,.35)'; sg.fillRect(-20, img.height / 2 - 6, 40, 22); }
   const imgToDraw = isPlayer ? spr.player : (v.type === 'police' ? spr.police : img);
   sg.drawImage(imgToDraw, -imgToDraw.width / 2, -imgToDraw.height / 2);
   if (v.type === 'police') {                                      // light bar
@@ -614,14 +633,14 @@ function renderScene() {
 function dist10(d) { return d > 100 ? Math.round(d / 10) * 10 : Math.round(d / 5) * 5; }
 
 function bubble(x, label, hot, alpha) {
-  const w = 108, h = 50, y = 598, x0 = x - w / 2;
+  const w = 92, h = 50, y = 598, x0 = x - w / 2;
   hg.save(); hg.globalAlpha = alpha;
   hg.fillStyle = K; hg.beginPath(); hg.moveTo(x - 11, y + h - 2); hg.lineTo(x + 11, y + h - 2); hg.lineTo(x, y + h + 18); hg.fill();
   hg.fillStyle = hot ? '#ff4a3a' : '#fff4c2'; hg.beginPath(); hg.moveTo(x - 7, y + h - 2); hg.lineTo(x + 7, y + h - 2); hg.lineTo(x, y + h + 11); hg.fill();
   rrect(hg, x0, y, w, h, 10); hg.fillStyle = K; hg.fill();
   rrect(hg, x0 + 3, y + 3, w - 6, h - 6, 8); hg.fillStyle = hot ? '#ff4a3a' : '#fff4c2'; hg.fill();
-  hg.imageSmoothingEnabled = false; hg.drawImage(spr.fast, x0 + 9, y + 6, 17, 38);
-  txt(hg, label, x0 + 32, y + 32, 12, hot ? '#fff' : '#111', 'left', hot ? '#000' : 'rgba(0,0,0,0)');
+  hg.imageSmoothingEnabled = false; hg.drawImage(spr.fast, x0 + 8, y + 9, 14, 32);
+  txt(hg, label, x0 + 27, y + 30, 10, hot ? '#fff' : '#111', 'left', hot ? '#000' : 'rgba(0,0,0,0)');
   hg.restore();
 }
 
@@ -653,6 +672,8 @@ function renderHUD() {
   txt(hg, 'MPH', 380, 64, 9, '#f6c90e', 'right');
   hg.fillStyle = '#222'; hg.fillRect(308, 58, 60, 5);
   hg.fillStyle = over ? '#ff3a2a' : '#4ade80'; hg.fillRect(308, 58, 60 * (P.speed / TOP_SPEED), 5);
+
+  if (effBrake) txt(hg, 'BRAKING', 380, 90, 9, '#ff5a4a', 'right');
 
   // sleep meter (right edge)
   const mx = 398, my = 124, mw = 16, mh = 340;
@@ -747,7 +768,7 @@ addEventListener('resize', layout); layout();
 function startGame() {
   resetGame(); holdId = null;
   mode = 'play';
-  ['menu', 'over', 'tune'].forEach(id => $(id).classList.add('hidden'));
+  ['menu', 'over'].forEach(id => $(id).classList.add('hidden'));
   $('flash').className = ''; $('coffee').classList.remove('hidden');
 }
 function showMenu() { resetGame(); mode = 'menu'; $('over').classList.add('hidden'); $('flash').className = ''; $('menu').classList.remove('hidden'); }
@@ -756,23 +777,6 @@ $('startBtn').onclick = startGame;
 $('againBtn').onclick = startGame;
 $('menuBtn').onclick = showMenu;
 
-// tuning panel
-function buildTune() {
-  const box = $('tuneRows'); box.innerHTML = '';
-  for (const d of TUNING) {
-    const row = document.createElement('div'); row.className = 'row';
-    row.innerHTML = '<label><span>' + d.label + '</span><b></b></label><input type="range" min="' + d.min + '" max="' + d.max + '" step="' + d.step + '">';
-    const inp = row.querySelector('input'), val = row.querySelector('b');
-    inp.value = cfg[d.k]; val.textContent = cfg[d.k];
-    inp.addEventListener('input', () => { cfg[d.k] = parseFloat(inp.value); val.textContent = cfg[d.k]; saveCfg(); });
-    box.appendChild(row);
-  }
-}
-let tuneFrom = 'menu';
-$('tuneBtn').onclick = () => { tuneFrom = 'menu'; buildTune(); $('menu').classList.add('hidden'); $('tune').classList.remove('hidden'); };
-$('tuneDone').onclick = () => { $('tune').classList.add('hidden'); $('menu').classList.remove('hidden'); };
-$('tuneReset').onclick = () => { cfg = { ...DEFAULTS }; saveCfg(); buildTune(); };
-$('menuBtn').onclick = () => { showMenu(); };
 
 requestAnimationFrame(frame);
 

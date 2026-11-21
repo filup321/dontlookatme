@@ -546,6 +546,16 @@
     </div>
   </section>
 
+  <section class="screen" id="screen-daily-done">
+    <span class="mode-badge">Daily Recall</span>
+    <h2>Daily Recall</h2>
+    <p id="daily-done-text"></p>
+    <div class="feedback-buttons">
+      <button class="secondary" id="btn-share-daily">Share your score</button>
+      <button class="secondary" id="btn-daily-menu">Main Menu</button>
+    </div>
+  </section>
+
   <section class="screen" id="screen-arrange">
     <span class="mode-badge" id="arrange-mode-badge"></span>
     <div class="arrange-board">
@@ -794,6 +804,60 @@
       variant: "fullrecall"
     });
   });
+
+  // ---- Daily Recall: one hand-made 4x4 grid per day, one try, no hints ----
+  // To add a day: copy an entry, change id/until/cells, and put its pictures in assets/images/.
+  // Each grid is playable from the previous grid's "until" (or immediately, for the first one) up to its own "until".
+  // "until" is written with an explicit Pacific offset: -08:00 in winter (PST), -07:00 in summer (PDT).
+  const DAILY_GRIDS = [
+    {
+      id: "2026-11-21",
+      until: "2026-11-22T01:00:00-08:00",
+      cells: [
+        {"r":0,"c":0,"type":"shape","value":{"geom":"ellipse","color":"4285F4"}},
+        {"r":0,"c":1,"type":"shape","value":{"geom":"triangle","color":"FF0000"}},
+        {"r":0,"c":2,"type":"shape","value":{"geom":"cube","color":"38761D"}},
+        {"r":0,"c":3,"type":"photo","value":"daily1-r0c3.png"},
+        {"r":1,"c":0,"type":"photo","value":"daily1-r1c0.png"},
+        {"r":1,"c":1,"type":"text","value":"?"},
+        {"r":1,"c":2,"type":"text","value":"$"},
+        {"r":1,"c":3,"type":"photo","value":"daily1-r1c3.png"},
+        {"r":2,"c":0,"type":"photo","value":"horse.png"},
+        {"r":2,"c":1,"type":"photo","value":"daily1-r2c1.png"},
+        {"r":2,"c":2,"type":"photo","value":"united-states.png"},
+        {"r":2,"c":3,"type":"photo","value":"daily1-r2c3.png"},
+        {"r":3,"c":0,"type":"photo","value":"rooster.png"},
+        {"r":3,"c":1,"type":"text","value":"21"},
+        {"r":3,"c":2,"type":"text","value":"12"},
+        {"r":3,"c":3,"type":"text","value":"1"}
+      ]
+    }
+  ];
+  const DAILY_STUDY_SECONDS = 12;
+  const DAILY_STORE_KEY = "dailyRecall.results";
+
+  // The grid whose window contains "now", or null if the next one hasn't been added yet.
+  function activeDailyGrid() {
+    const now = Date.now();
+    const grids = DAILY_GRIDS.slice().sort((a, b) => Date.parse(a.until) - Date.parse(b.until));
+    return grids.find(g => now < Date.parse(g.until)) || null;
+  }
+
+  function loadDailyResults() {
+    try { return JSON.parse(localStorage.getItem(DAILY_STORE_KEY) || "{}") || {}; } catch (e) { return {}; }
+  }
+  function saveDailyResult(id, result) {
+    const all = loadDailyResults();
+    all[id] = result;
+    try { localStorage.setItem(DAILY_STORE_KEY, JSON.stringify(all)); } catch (e) { /* storage blocked */ }
+  }
+  function dailyModeFor(grid) {
+    return {
+      name: "daily", label: "Daily Recall", variant: "daily", rows: 4, cols: 4,
+      studyTimeSeconds: DAILY_STUDY_SECONDS, dailyId: grid.id,
+      contentPool: [{ slide: grid.id, cells: grid.cells }]
+    };
+  }
 
   // Grids with 2 or 3 rows/columns are asked by name ("bottom right"); bigger ones by number ("row 1 column 2").
   const ROW_NAMES = { 2: ["top", "bottom"], 3: ["top", "middle", "bottom"] };
@@ -1049,7 +1113,7 @@
     appState.screen = id;
 
     const streakBar = document.getElementById("streak-bar");
-    streakBar.classList.toggle("visible", STREAK_VISIBLE_SCREENS.includes(id));
+    streakBar.classList.toggle("visible", STREAK_VISIBLE_SCREENS.includes(id) && !(appState.mode && appState.mode.variant === "daily"));
 
     updateHintButton();
     updateRerollButton();
@@ -1124,9 +1188,10 @@
     };
 
     if (!variant) {
-      prompt.textContent = "Classic: type what was where. Perfect Recall: drag everything back into place.";
-      addButton("Classic", () => renderMenu("classic"));
+      prompt.textContent = "Daily Recall: one grid a day, one try. Perfect Recall: drag everything back into place. Classic: type what was where.";
+      addButton("Daily Recall", onDailyButton);
       addButton("Perfect Recall", () => renderMenu("fullrecall"));
+      addButton("Classic", () => renderMenu("classic"));
       return;
     }
     prompt.textContent = variant === "fullrecall" ? "Perfect Recall: pick a difficulty." : "Pick a difficulty to begin.";
@@ -1134,6 +1199,36 @@
     // Buttons just say Easy / Medium / Hard; the mode name is already shown by the prompt.
     Object.values(modes).forEach(mode => addButton(mode.label.replace(/^Perfect Recall /, ""), () => onSelectMode(mode)));
     addButton("Back", () => renderMenu(null), true);
+  }
+
+  // Daily Recall: show the rules if today's grid is unplayed, otherwise the result / "come back later" screen.
+  function onDailyButton() {
+    const grid = activeDailyGrid();
+    if (!grid) { showDailyDone(null, null); return; }
+    const done = loadDailyResults()[grid.id];
+    if (done) { showDailyDone(grid, done); return; }
+    openInstructions(dailyModeFor(grid));
+  }
+
+  function showDailyDone(grid, result) {
+    const text = document.getElementById("daily-done-text");
+    const shareBtn = document.getElementById("btn-share-daily");
+    if (!grid) {
+      text.textContent = "There's no Daily Recall grid right now. A new one is coming soon, so check back later!";
+      shareBtn.style.display = "none";
+    } else {
+      const total = grid.cells.length;
+      text.textContent = `You already played today's Daily Recall and got ${result.score} of ${total} correct. ` +
+        `A new grid arrives every day at 1am Pacific.`;
+      appState.shareText = dailyShareText(result.score);
+      shareBtn.style.display = "";
+      shareBtn.textContent = "Share your score";
+    }
+    showScreen("screen-daily-done");
+  }
+
+  function dailyShareText(score) {
+    return `I just scored ${score} on Daily Recall. Can you beat it?`;
   }
 
   function onSelectMode(mode) {
@@ -1154,7 +1249,11 @@
     document.getElementById("instructions-mode-badge").textContent = mode.label;
     document.getElementById("instructions-text").textContent =
       `You will be given ${mode.studyTimeSeconds} seconds to memorize the objects on a ${mode.cols}x${mode.rows} grid. ` +
-      (mode.variant === "fullrecall"
+      (mode.variant === "daily"
+        ? `After time's up, the grid goes blank and the objects appear in a row at the bottom. ` +
+          `Drag each one back to where it was, then tap Submit. Your score is how many squares you get right. ` +
+          `You only get one try per day, and there are no hints.`
+      : mode.variant === "fullrecall"
         ? `After time's up, the grid goes blank and the objects appear in a row at the bottom. ` +
           `Drag each one back to where it was, then tap Submit.`
         : `After time's up, you will be asked to recall the item in a specific location.`);
@@ -1271,7 +1370,7 @@
 
       if (elapsed >= durationMs) {
         appState.rafHandle = null;
-        if (appState.mode.variant === "fullrecall") enterArrange();
+        if (appState.mode.variant === "fullrecall" || appState.mode.variant === "daily") enterArrange();
         else enterQuestion();
       } else {
         appState.rafHandle = requestAnimationFrame(tick);
@@ -1420,6 +1519,7 @@
     document.getElementById("arrange-mark").classList.remove("show");
     document.getElementById("arrange-detail").textContent = "";
     document.getElementById("arrange-buttons").style.display = "none";
+    document.getElementById("btn-arrange-again").style.display = "";
     const submit = document.getElementById("btn-submit-arrangement");
     submit.style.display = "";
     updateSubmitState();
@@ -1569,6 +1669,19 @@
     // Items are compared by identity (picture / shape / text), so two identical items can swap places.
     const wrong = arrange.zones.filter(z => z.item.id !== z.expectedId);
     arrange.zones.forEach(z => z.el.classList.toggle("wrong", wrong.includes(z)));
+
+    if (appState.mode.variant === "daily") {
+      const total = arrange.zones.length, score = total - wrong.length;
+      saveDailyResult(appState.mode.dailyId, { score, finished: true, ts: Date.now() });
+      appState.shareText = dailyShareText(score);
+      const shareBtn = document.getElementById("btn-share-arrange");
+      shareBtn.style.display = "";
+      shareBtn.textContent = "Share your score";
+      document.getElementById("btn-arrange-again").style.display = "none";
+      document.getElementById("arrange-detail").textContent = `You got ${score} of ${total} correct.`;
+      document.getElementById("arrange-buttons").style.display = "flex";
+      return;
+    }
 
     if (wrong.length === 0) {
       appState.streak += 1;
@@ -1831,7 +1944,18 @@
       showScreen("screen-menu");
     });
 
-    document.getElementById("btn-start-round").addEventListener("click", () => startRound(appState.mode));
+    document.getElementById("btn-start-round").addEventListener("click", () => {
+      const mode = appState.mode;
+      if (mode.variant === "daily") {
+        // One try only: starting counts as playing, so leaving or refreshing can't be used to peek and retry.
+        const grid = activeDailyGrid();
+        if (!grid || loadDailyResults()[grid.id]) { showDailyDone(grid, grid && loadDailyResults()[grid.id]); return; }
+        saveDailyResult(grid.id, { score: 0, finished: false, ts: Date.now() });
+      }
+      startRound(mode);
+    });
+    document.getElementById("btn-share-daily").addEventListener("click", (e) => shareScore(e.currentTarget));
+    document.getElementById("btn-daily-menu").addEventListener("click", () => showScreen("screen-menu"));
     document.getElementById("btn-instructions-back").addEventListener("click", () => showScreen("screen-menu"));
 
     document.getElementById("btn-submit-answer").addEventListener("click", submitAnswer);

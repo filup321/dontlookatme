@@ -34,7 +34,24 @@
     align-items: center;
     justify-content: center;
     padding: 16px;
+    padding-top: 56px; /* room for the Main Menu button in the top-left corner */
   }
+
+  .home-btn {
+    display: none;
+    position: fixed;
+    top: 12px;
+    left: 12px;
+    z-index: 70;
+    padding: 6px 14px;
+    font-size: 0.85rem;
+    border-radius: 999px;
+    background: var(--panel);
+    border: 1px solid rgba(255,255,255,0.18);
+    color: var(--text);
+  }
+  .home-btn.visible { display: inline-block; }
+  .home-btn:hover { background: #31364d; }
 
   .screen {
     display: none;
@@ -470,6 +487,8 @@
 </style>
 </head>
 <body>
+<button class="home-btn" id="btn-home">Main Menu</button>
+
 <div id="app">
 
   <section class="screen active" id="screen-menu">
@@ -480,7 +499,7 @@
       <h3>Leaderboard</h3>
       <div class="lb-tabs" id="leaderboard-tabs" role="tablist">
         <button class="lb-tab" role="tab" data-tab="classic">Classic</button>
-        <button class="lb-tab" role="tab" data-tab="fullrecall">Full Recall</button>
+        <button class="lb-tab" role="tab" data-tab="fullrecall">Perfect Recall</button>
         <button class="lb-tab" role="tab" data-tab="veracruz">Road to Veracruz</button>
       </div>
       <ul id="leaderboard-list"></ul>
@@ -540,6 +559,7 @@
     <p id="arrange-detail"></p>
     <div class="feedback-buttons" id="arrange-buttons" style="display:none">
       <button id="btn-arrange-again">Play Again</button>
+      <button class="secondary" id="btn-share-arrange">Share your score</button>
       <button class="secondary" id="btn-arrange-menu">Main Menu</button>
     </div>
   </section>
@@ -556,6 +576,7 @@
     <p id="feedback-detail"></p>
     <div class="feedback-buttons" id="feedback-buttons">
       <button id="btn-play-again">Play Again</button>
+      <button class="secondary" id="btn-share">Share your score</button>
       <button class="secondary" id="btn-feedback-menu">Main Menu</button>
     </div>
   </section>
@@ -769,7 +790,7 @@
   ["easy", "medium", "hard"].forEach(key => {
     FULL_RECALL_MODES[key] = Object.assign({}, MODES[key], {
       name: "fullrecall-" + key,
-      label: "Full Recall " + MODES[key].label,
+      label: "Perfect Recall " + MODES[key].label,
       variant: "fullrecall"
     });
   });
@@ -1032,6 +1053,7 @@
 
     updateHintButton();
     updateRerollButton();
+    document.getElementById("btn-home").classList.toggle("visible", id !== "screen-menu");
 
     if (id === "screen-menu") {
       renderMenu(null);
@@ -1102,14 +1124,15 @@
     };
 
     if (!variant) {
-      prompt.textContent = "Classic: type what was where. Full Recall: drag everything back into place.";
+      prompt.textContent = "Classic: type what was where. Perfect Recall: drag everything back into place.";
       addButton("Classic", () => renderMenu("classic"));
-      addButton("Full Recall", () => renderMenu("fullrecall"));
+      addButton("Perfect Recall", () => renderMenu("fullrecall"));
       return;
     }
-    prompt.textContent = "Pick a difficulty to begin.";
+    prompt.textContent = variant === "fullrecall" ? "Perfect Recall: pick a difficulty." : "Pick a difficulty to begin.";
     const modes = variant === "fullrecall" ? FULL_RECALL_MODES : MODES;
-    Object.values(modes).forEach(mode => addButton(mode.label, () => onSelectMode(mode)));
+    // Buttons just say Easy / Medium / Hard; the mode name is already shown by the prompt.
+    Object.values(modes).forEach(mode => addButton(mode.label.replace(/^Perfect Recall /, ""), () => onSelectMode(mode)));
     addButton("Back", () => renderMenu(null), true);
   }
 
@@ -1299,6 +1322,7 @@
       appState.streak = 0;
       updateStreakDisplay();
       appState.pendingSubmit = submitScore(appState.mode.name, getPlayerName(), finalStreak);
+      prepareShare(finalStreak, "btn-share");
       resultEl.textContent = "Incorrect";
       resultEl.className = "feedback-result incorrect";
       detailEl.textContent = `The correct answer was "${displayAnswer(cell)}".` +
@@ -1559,10 +1583,56 @@
       appState.streak = 0;
       updateStreakDisplay();
       appState.pendingSubmit = submitScore(appState.mode.name, getPlayerName(), finalStreak);
+      prepareShare(finalStreak, "btn-share-arrange");
       document.getElementById("arrange-detail").textContent =
         `Incorrect: ${wrong.length} ${wrong.length === 1 ? "tile is" : "tiles are"} in the wrong place.` +
         (finalStreak > 0 ? ` Final streak: ${finalStreak}.` : "");
       document.getElementById("arrange-buttons").style.display = "flex";
+    }
+  }
+
+  // ---- Main Menu button (top-left, every screen except the menu) ----
+
+  function goToMainMenu() {
+    // Leaving mid-game: keep the streak the player already earned (personal bests only, so this never lowers a score).
+    if (appState.streak > 0 && appState.mode && STREAK_VISIBLE_SCREENS.includes(appState.screen)) {
+      appState.pendingSubmit = submitScore(appState.mode.name, getPlayerName(), appState.streak);
+    }
+    appState.streak = 0;
+    updateStreakDisplay();
+    appState.roundToken++; // cancels any study timer still waiting on images
+    clearTimers();
+    showScreen("screen-menu");
+  }
+
+  // ---- Share your score ----
+
+  function prepareShare(streak, buttonId) {
+    const modeName = appState.mode.variant === "fullrecall" ? appState.mode.label : "Classic " + appState.mode.label;
+    appState.shareText = `I got a streak of ${streak} on ${modeName} in Memory Game! Can you beat it?`;
+    const btn = document.getElementById(buttonId);
+    btn.style.display = streak > 0 ? "" : "none"; // nothing worth sharing at 0
+    btn.textContent = "Share your score";
+  }
+
+  async function shareScore(btn) {
+    const url = location.origin + location.pathname.replace(/index\.html$/, "");
+    const text = appState.shareText || "Try this memory game!";
+    if (navigator.share) {
+      try {
+        await navigator.share({ title: "Memory Game", text, url });
+        return;
+      } catch (e) {
+        if (e && e.name === "AbortError") return; // player closed the share sheet
+      }
+    }
+    const full = `${text} ${url}`;
+    try {
+      await navigator.clipboard.writeText(full);
+      btn.textContent = "Copied to clipboard!";
+      setTimeout(() => { btn.textContent = "Share your score"; }, 2000);
+    } catch (e) {
+      window.prompt("Copy this to share your score:", full);
     }
   }
 
@@ -1680,7 +1750,7 @@
       rows = [{ key: "veracruz", label: "Best distance", unit: " m" }];
     } else {
       const modes = tab === "fullrecall" ? FULL_RECALL_MODES : MODES;
-      rows = Object.values(modes).map(m => ({ key: m.name, label: m.label.replace(/^Full Recall /, ""), unit: "" }));
+      rows = Object.values(modes).map(m => ({ key: m.name, label: m.label.replace(/^Perfect Recall /, ""), unit: "" }));
     }
     const results = await Promise.all(rows.map(r => getTopScore(r.key)));
     if (request !== leaderboardRequest) return; // a newer render superseded this one
@@ -1768,6 +1838,9 @@
     });
 
     document.getElementById("btn-submit-arrangement").addEventListener("click", submitArrangement);
+    document.getElementById("btn-home").addEventListener("click", goToMainMenu);
+    document.getElementById("btn-share").addEventListener("click", (e) => shareScore(e.currentTarget));
+    document.getElementById("btn-share-arrange").addEventListener("click", (e) => shareScore(e.currentTarget));
     document.getElementById("btn-hint").addEventListener("click", onHintButton);
     document.getElementById("btn-arrange-again").addEventListener("click", () => {
       appState.hintsLeft = 1; // a new game gets a fresh hint

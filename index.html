@@ -875,6 +875,28 @@
         {"r":3,"c":2,"type":"photo","value":"daily3-r3c2.png"},
         {"r":3,"c":3,"type":"shape","value":{"geom": "smileyFace", "color": "FFFF00"}}
       ]
+    },
+    {
+      id: "2026-11-24",
+      until: "2026-11-25T01:00:00-08:00",
+      cells: [
+        {"r":0,"c":0,"type":"shape","value":{"geom": "rightArrow", "color": "000000"}},
+        {"r":0,"c":1,"type":"shape","value":{"geom": "rightArrow", "color": "000000"}},
+        {"r":0,"c":2,"type":"photo","value":"daily4-r0c2.png"},
+        {"r":0,"c":3,"type":"photo","value":"daily4-r0c3.png"},
+        {"r":1,"c":0,"type":"text","value":"A"},
+        {"r":1,"c":1,"type":"text","value":"B"},
+        {"r":1,"c":2,"type":"text","value":"C"},
+        {"r":1,"c":3,"type":"text","value":"N"},
+        {"r":2,"c":0,"type":"shape","value":{"geom": "heart", "color": "9900FF"}},
+        {"r":2,"c":1,"type":"shape","value":{"geom": "star5", "color": "0000FF"}},
+        {"r":2,"c":2,"type":"text","value":"R"},
+        {"r":2,"c":3,"type":"text","value":"P"},
+        {"r":3,"c":0,"type":"photo","value":"daily4-r3c0.png"},
+        {"r":3,"c":1,"type":"photo","value":"daily4-r3c1.png"},
+        {"r":3,"c":2,"type":"photo","value":"daily4-r3c2.png"},
+        {"r":3,"c":3,"type":"photo","value":"daily4-r3c3.png"}
+      ]
     }
   ];
   const DAILY_STUDY_SECONDS = 12;
@@ -967,7 +989,8 @@
         <line x1="5" y1="50" x2="55" y2="50" stroke="${hex(color)}" stroke-width="8" stroke-linecap="round"/>
         <circle cx="30" cy="25" r="7" fill="${hex(color)}"/>
         <circle cx="30" cy="75" r="7" fill="${hex(color)}"/>
-      </svg>`
+      </svg>`,
+    rightArrow: (color) => `<svg viewBox="0 0 100 100"><polygon fill="${hex(color)}" points="4,34 58,34 58,12 96,50 58,88 58,66 4,66"/></svg>`
   };
 
   function renderCellContent(cell) {

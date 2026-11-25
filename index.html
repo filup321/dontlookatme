@@ -361,6 +361,23 @@
   }
   .arrange-locked .tile { cursor: default; }
 
+  /* "2 more seconds": the full grid shown over the board for a moment during Daily Recall */
+  .peek-btn { padding: 8px 18px; font-size: 0.95rem; }
+  .peek-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+  .peek-overlay {
+    position: absolute;
+    inset: 0;
+    display: none;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+    background: var(--bg);
+    z-index: 4;
+  }
+  .peek-overlay.show { display: flex; }
+  .peek-overlay .progress-track { width: 100%; max-width: 520px; }
+  #peek-grid { width: min(100%, var(--maxw), calc((100vh - 360px) * var(--cols) / var(--rows))); min-width: 200px; }
+
   .result-mark {
     position: absolute;
     inset: 0;
@@ -558,8 +575,13 @@
 
   <section class="screen" id="screen-arrange">
     <span class="mode-badge" id="arrange-mode-badge"></span>
+    <button class="secondary peek-btn" id="btn-peek" type="button" style="display:none">2 more seconds</button>
     <div class="arrange-board">
       <div class="grid" id="arrange-grid"></div>
+      <div class="peek-overlay" id="peek-overlay">
+        <div class="progress-track"><div class="progress-fill" id="peek-progress-fill"></div></div>
+        <div class="grid" id="peek-grid"></div>
+      </div>
       <div class="result-mark" id="arrange-mark">
         <svg viewBox="0 0 100 100" aria-label="Correct"><circle cx="50" cy="50" r="46" fill="#38a169" fill-opacity="0.93"/><path d="M28 52 L44 68 L73 33" fill="none" stroke="#fff" stroke-width="10" stroke-linecap="round" stroke-linejoin="round"/></svg>
       </div>
@@ -807,6 +829,7 @@
 
   // ---- Daily Recall: one hand-made 4x4 grid per day, one try, no hints ----
   // To add a day: copy an entry, change id/until/cells, and put its pictures in assets/images/.
+  // Text cells can carry a "color" (hex, no #) to match colored numbers/letters on the slide.
   // Each grid is playable from the previous grid's "until" (or immediately, for the first one) up to its own "until".
   // "until" is written with an explicit Pacific offset: -08:00 in winter (PST), -07:00 in summer (PDT).
   const DAILY_GRIDS = [
@@ -897,9 +920,31 @@
         {"r":3,"c":2,"type":"photo","value":"daily4-r3c2.png"},
         {"r":3,"c":3,"type":"photo","value":"daily4-r3c3.png"}
       ]
+    },
+    {
+      id: "2026-11-25",
+      until: "2026-11-26T01:00:00-08:00",
+      cells: [
+        {"r":0,"c":0,"type":"photo","value":"daily5-r0c0.png"},
+        {"r":0,"c":1,"type":"photo","value":"daily5-r0c1.png"},
+        {"r":0,"c":2,"type":"photo","value":"daily5-r0c2.png"},
+        {"r":0,"c":3,"type":"photo","value":"daily5-r0c3.png"},
+        {"r":1,"c":0,"type":"photo","value":"daily5-r1c0.png"},
+        {"r":1,"c":1,"type":"photo","value":"daily5-r1c1.png"},
+        {"r":1,"c":2,"type":"shape","value":{"geom": "ellipse", "color": "FF0000"}},
+        {"r":1,"c":3,"type":"shape","value":{"geom": "ellipse", "color": "4285F4"}},
+        {"r":2,"c":0,"type":"photo","value":"daily5-r2c0.png"},
+        {"r":2,"c":1,"type":"photo","value":"daily5-r2c1.png"},
+        {"r":2,"c":2,"type":"photo","value":"daily5-r2c2.png"},
+        {"r":2,"c":3,"type":"photo","value":"daily5-r2c3.png"},
+        {"r":3,"c":0,"type":"shape","value":{"geom": "mathEqual", "color": "000000"}},
+        {"r":3,"c":1,"type":"shape","value":{"geom": "mathPlus", "color": "000000"}},
+        {"r":3,"c":2,"type":"text","value":"5","color":"FF0000"},
+        {"r":3,"c":3,"type":"text","value":"6","color":"4285F4"}
+      ]
     }
   ];
-  const DAILY_STUDY_SECONDS = 12;
+  const DAILY_STUDY_SECONDS = 15;
   const DAILY_STORE_KEY = "dailyRecall.results";
 
   // The grid whose window contains "now", or null if the next one hasn't been added yet.
@@ -998,7 +1043,8 @@
       return `<img src="assets/images/${cell.value}" alt="">`;
     }
     if (cell.type === "text") {
-      return `<div class="cell-text">${escapeHtml(cell.value)}</div>`;
+      const colorStyle = cell.color ? ` style="color:${hex(cell.color)}"` : "";
+      return `<div class="cell-text"${colorStyle}>${escapeHtml(cell.value)}</div>`;
     }
     if (cell.type === "shape") {
       const renderer = SHAPES[cell.value.geom];
@@ -1330,7 +1376,8 @@
       (mode.variant === "daily"
         ? `After time's up, the grid goes blank and the objects appear in a row at the bottom. ` +
           `Drag each one back to where it was, then tap Submit. Your score is how many squares you get right. ` +
-          `You only get one try per day, and there are no hints.`
+          `You only get one try per day, and there are no hints. ` +
+          `Stuck? Tap "2 more seconds" once to see the full grid again.`
       : mode.variant === "fullrecall"
         ? `After time's up, the grid goes blank and the objects appear in a row at the bottom. ` +
           `Drag each one back to where it was, then tap Submit.`
@@ -1547,6 +1594,60 @@
       arrange.locked || !arrange.zones.every(z => z.item);
   }
 
+  // ---- "2 more seconds" (Daily Recall only): show the full grid again for 2s, once per game ----
+  const PEEK_SECONDS = 2;
+
+  function setupPeek(mode, round) {
+    const btn = document.getElementById("btn-peek");
+    const overlay = document.getElementById("peek-overlay");
+    overlay.classList.remove("show");
+    btn.style.display = mode.variant === "daily" ? "" : "none";
+    btn.disabled = false;
+    btn.onclick = () => runPeek(mode, round);
+  }
+
+  function runPeek(mode, round) {
+    const btn = document.getElementById("btn-peek");
+    if (btn.disabled || arrange.locked || arrange.peeking) return;
+    btn.disabled = true;
+    arrange.peeking = true;
+
+    const grid = document.getElementById("peek-grid");
+    grid.style.setProperty("--rows", String(mode.rows));
+    grid.style.setProperty("--cols", String(mode.cols));
+    grid.style.aspectRatio = `${mode.cols} / ${mode.rows}`;
+    grid.classList.toggle("dense", mode.rows * mode.cols > 9);
+    grid.innerHTML = "";
+    const byPosition = new Map(round.cells.map(c => [c.r + "," + c.c, c]));
+    for (let r = 0; r < mode.rows; r++) {
+      for (let c = 0; c < mode.cols; c++) {
+        const cell = byPosition.get(r + "," + c);
+        const cellEl = document.createElement("div");
+        cellEl.className = "cell";
+        if (cell) cellEl.innerHTML = renderCellContent(cell);
+        grid.appendChild(cellEl);
+      }
+    }
+
+    const overlay = document.getElementById("peek-overlay");
+    const fill = document.getElementById("peek-progress-fill");
+    fill.style.width = "100%";
+    overlay.classList.add("show");
+    const durationMs = PEEK_SECONDS * 1000;
+    const start = performance.now();
+    function tick(now) {
+      const elapsed = now - start;
+      fill.style.width = Math.max(0, 100 - (elapsed / durationMs) * 100) + "%";
+      if (elapsed >= durationMs) {
+        overlay.classList.remove("show");
+        arrange.peeking = false;
+      } else {
+        requestAnimationFrame(tick);
+      }
+    }
+    requestAnimationFrame(tick);
+  }
+
   function enterArrange() {
     const mode = appState.mode;
     const round = appState.round;
@@ -1593,6 +1694,7 @@
       arrange.items.push(item);
     });
 
+    setupPeek(mode, round);
     document.getElementById("screen-arrange").classList.remove("arrange-locked");
     document.getElementById("arrange-mark").classList.remove("show");
     document.getElementById("arrange-detail").textContent = "";
@@ -1661,7 +1763,7 @@
   }
 
   function onTilePointerDown(e, item) {
-    if (arrange.locked || item.locked || (e.pointerType === "mouse" && e.button !== 0)) return;
+    if (arrange.locked || arrange.peeking || item.locked || (e.pointerType === "mouse" && e.button !== 0)) return;
     // While choosing a hint square, a tap on a placed tile is a square choice, not a pick-up.
     if (arrange.hintActive && item.zone) return;
     e.preventDefault();
@@ -1737,7 +1839,7 @@
   }
 
   function submitArrangement() {
-    if (arrange.locked || !arrange.zones.every(z => z.item)) return;
+    if (arrange.locked || arrange.peeking || !arrange.zones.every(z => z.item)) return;
     arrange.locked = true;
     arrange.hintActive = false;
     updateHintButton();

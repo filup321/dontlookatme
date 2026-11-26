@@ -377,6 +377,10 @@
   .peek-overlay.show { display: flex; }
   .peek-overlay .progress-track { width: 100%; max-width: 520px; }
   #peek-grid { width: min(100%, var(--maxw), calc((100vh - 360px) * var(--cols) / var(--rows))); min-width: 200px; }
+  /* Daily Recall: the correct grid shown under the submitted one */
+  #answer-reveal { width: 100%; display: flex; flex-direction: column; align-items: center; margin-top: 8px; }
+  .answer-reveal-label { margin: 0 0 8px; font-weight: 600; opacity: 0.75; }
+  #answer-grid { width: min(100%, var(--maxw), calc((100vh - 340px) * var(--cols) / var(--rows))); min-width: 200px; margin: 0 auto; }
 
   .result-mark {
     position: absolute;
@@ -589,6 +593,10 @@
     <div class="tray" id="arrange-tray"></div>
     <button id="btn-submit-arrangement" disabled>Submit</button>
     <p id="arrange-detail"></p>
+    <div id="answer-reveal" style="display:none">
+      <p class="answer-reveal-label">Correct grid</p>
+      <div class="grid" id="answer-grid"></div>
+    </div>
     <div class="feedback-buttons" id="arrange-buttons" style="display:none">
       <button id="btn-arrange-again">Play Again</button>
       <button class="secondary" id="btn-share-arrange">Share your score</button>
@@ -632,7 +640,7 @@
       {"slide":1,"cells":[{"r":0,"c":0,"type":"photo","value":"pig.png"},{"r":0,"c":1,"type":"shape","value":{"geom":"rect","color":"FFFF00"}},{"r":1,"c":0,"type":"text","value":"oink"},{"r":1,"c":1,"type":"text","value":"9"}]},
       {"slide":2,"cells":[{"r":0,"c":0,"type":"text","value":"3"},{"r":0,"c":1,"type":"photo","value":"gorilla.png"},{"r":1,"c":0,"type":"shape","value":{"geom":"ellipse","color":"4285F4"}},{"r":1,"c":1,"type":"text","value":"moo"}]},
       {"slide":3,"cells":[{"r":0,"c":0,"type":"text","value":"6"},{"r":0,"c":1,"type":"text","value":"yes"},{"r":1,"c":0,"type":"photo","value":"panda.png"},{"r":1,"c":1,"type":"shape","value":{"geom":"triangle","color":"FF0000"}}]},
-      {"slide":4,"cells":[{"r":0,"c":0,"type":"text","value":"2"},{"r":0,"c":1,"type":"shape","answers":["purple"],"value":{"geom":"heart","color":"9900FF"}},{"r":1,"c":0,"type":"photo","value":"rhino.png"},{"r":1,"c":1,"type":"text","value":"eye"}]},
+      {"slide":4,"cells":[{"r":0,"c":0,"type":"text","value":"2"},{"r":0,"c":1,"type":"shape","value":{"geom":"heart","color":"9900FF"}},{"r":1,"c":0,"type":"photo","value":"rhino.png"},{"r":1,"c":1,"type":"text","value":"eye"}]},
       {"slide":5,"cells":[{"r":0,"c":0,"type":"photo","value":"elephant.png"},{"r":0,"c":1,"type":"shape","value":{"geom":"lightningBolt","color":"FF0000"}},{"r":1,"c":0,"type":"text","value":"potter"},{"r":1,"c":1,"type":"text","value":"2"}]},
       {"slide":6,"cells":[{"r":0,"c":0,"type":"text","value":"moon"},{"r":0,"c":1,"type":"text","value":"8"},{"r":1,"c":0,"type":"shape","value":{"geom":"sun","color":"FF9900"}},{"r":1,"c":1,"type":"photo","value":"zebra.png"}]},
       {"slide":7,"cells":[{"r":0,"c":0,"type":"text","value":"5"},{"r":0,"c":1,"type":"photo","value":"horse.png"},{"r":1,"c":0,"type":"text","value":"dog"},{"r":1,"c":1,"type":"shape","value":{"geom":"cloud","color":"EEEEEE"}}]},
@@ -801,9 +809,27 @@
     return "text:" + v;
   }
 
-  // Slide-specific answers win; otherwise use the item's answers.
+  // Color names for shapes, keyed by hex. A shape accepts its shape name, its color, or both ("purple heart").
+  // The first name is the one shown on the "Incorrect" screen.
+  const SHAPE_COLOR_NAMES = {
+    "9900FF": ["purple"],
+    "FF0000": ["red"],
+    "4285F4": ["blue"],
+    "0000FF": ["blue"],
+    "38761D": ["green"],
+    "FFFF00": ["yellow"],
+    "FF9900": ["orange"],
+    "EEEEEE": ["gray", "grey", "light gray", "light grey", "white"],
+    "000000": ["black"]
+  };
+
+  // Photos/texts: slide-specific answers win; otherwise use the item's answers.
+  // Shapes: item answers + any slide answers + the shape's color names, all accepted.
   function cellAnswers(cell) {
-    return cell.answers || ITEM_ANSWERS[itemId(cell)] || [];
+    if (cell.type !== "shape") return cell.answers || ITEM_ANSWERS[itemId(cell)] || [];
+    const all = [].concat(ITEM_ANSWERS[itemId(cell)] || [], cell.answers || [],
+      SHAPE_COLOR_NAMES[String(cell.value.color).toUpperCase()] || []);
+    return [...new Set(all)];
   }
 
 
@@ -931,7 +957,7 @@
         {"r":0,"c":3,"type":"photo","value":"daily5-r0c3.png"},
         {"r":1,"c":0,"type":"photo","value":"daily5-r1c0.png"},
         {"r":1,"c":1,"type":"photo","value":"daily5-r1c1.png"},
-        {"r":1,"c":2,"type":"shape","value":{"geom": "ellipse", "color": "FF0000"}},
+        {"r":1,"c":2,"type":"shape","value":{"geom": "oval", "color": "FF0000"}},
         {"r":1,"c":3,"type":"shape","value":{"geom": "ellipse", "color": "4285F4"}},
         {"r":2,"c":0,"type":"photo","value":"daily5-r2c0.png"},
         {"r":2,"c":1,"type":"photo","value":"daily5-r2c1.png"},
@@ -941,6 +967,29 @@
         {"r":3,"c":1,"type":"shape","value":{"geom": "mathPlus", "color": "000000"}},
         {"r":3,"c":2,"type":"text","value":"5","color":"FF0000"},
         {"r":3,"c":3,"type":"text","value":"6","color":"4285F4"}
+      ]
+    }
+,
+    {
+      id: "2026-11-26",
+      until: "2026-11-27T01:00:00-08:00",
+      cells: [
+        {"r":0,"c":0,"type":"photo","value":"daily6-r0c0.png"},
+        {"r":0,"c":1,"type":"photo","value":"daily6-r0c1.png"},
+        {"r":0,"c":2,"type":"photo","value":"daily6-r0c2.png"},
+        {"r":0,"c":3,"type":"photo","value":"daily6-r0c3.png"},
+        {"r":1,"c":0,"type":"photo","value":"daily6-r1c0.png"},
+        {"r":1,"c":1,"type":"photo","value":"daily6-r1c1.png"},
+        {"r":1,"c":2,"type":"photo","value":"daily6-r1c2.png"},
+        {"r":1,"c":3,"type":"photo","value":"daily5-r0c3.png"},
+        {"r":2,"c":0,"type":"photo","value":"daily6-r2c0.png"},
+        {"r":2,"c":1,"type":"photo","value":"daily6-r2c1.png"},
+        {"r":2,"c":2,"type":"photo","value":"daily6-r2c2.png"},
+        {"r":2,"c":3,"type":"photo","value":"daily6-r2c3.png"},
+        {"r":3,"c":0,"type":"photo","value":"daily6-r3c0.png"},
+        {"r":3,"c":1,"type":"photo","value":"daily6-r3c1.png"},
+        {"r":3,"c":2,"type":"photo","value":"daily2-r2c1.png"},
+        {"r":3,"c":3,"type":"photo","value":"daily6-r3c3.png"}
       ]
     }
   ];
@@ -988,6 +1037,8 @@
   const SHAPES = {
     rect: (color) => `<div style="width:70%;height:70%;background:${hex(color)};border-radius:4px;"></div>`,
     ellipse: (color) => `<div style="width:70%;height:70%;background:${hex(color)};border-radius:50%;"></div>`,
+    // Wide oval (about 2:1, like a stretched oval on the slide). "ellipse" above is a circle.
+    oval: (color) => `<div style="width:80%;height:38%;background:${hex(color)};border-radius:50%;"></div>`,
     triangle: (color) => `<svg viewBox="0 0 100 90"><polygon fill="${hex(color)}" points="50,4 96,86 4,86"/></svg>`,
     mathPlus: (color) => `<div style="position:relative;width:60%;height:60%;">
         <div style="position:absolute;top:40%;left:0;width:100%;height:20%;background:${hex(color)};border-radius:3px;"></div>
@@ -1196,6 +1247,11 @@
   // What the "Incorrect" screen shows: the key's first answer, or the digits for number cells.
   function displayAnswer(cell) {
     if (cell.type === "text" && toNumber(normalize(cell.value)) !== null) return cell.value;
+    if (cell.type === "shape") {
+      const shape = cellAnswers(cell)[0];
+      const color = (SHAPE_COLOR_NAMES[String(cell.value.color).toUpperCase()] || [])[0];
+      return color && !normalize(shape).split(" ").includes(color) ? color + " " + shape : shape;
+    }
     return cellAnswers(cell)[0];
   }
 
@@ -1606,13 +1662,8 @@
     btn.onclick = () => runPeek(mode, round);
   }
 
-  function runPeek(mode, round) {
-    const btn = document.getElementById("btn-peek");
-    if (btn.disabled || arrange.locked || arrange.peeking) return;
-    btn.disabled = true;
-    arrange.peeking = true;
-
-    const grid = document.getElementById("peek-grid");
+  // Draws the round's full, correct grid into gridEl (used by "2 more seconds" and the Daily answer reveal).
+  function fillGrid(grid, mode, round) {
     grid.style.setProperty("--rows", String(mode.rows));
     grid.style.setProperty("--cols", String(mode.cols));
     grid.style.aspectRatio = `${mode.cols} / ${mode.rows}`;
@@ -1628,6 +1679,15 @@
         grid.appendChild(cellEl);
       }
     }
+  }
+
+  function runPeek(mode, round) {
+    const btn = document.getElementById("btn-peek");
+    if (btn.disabled || arrange.locked || arrange.peeking) return;
+    btn.disabled = true;
+    arrange.peeking = true;
+
+    fillGrid(document.getElementById("peek-grid"), mode, round);
 
     const overlay = document.getElementById("peek-overlay");
     const fill = document.getElementById("peek-progress-fill");
@@ -1681,6 +1741,7 @@
 
     const tray = document.getElementById("arrange-tray");
     tray.innerHTML = "";
+    tray.style.display = "";
     shuffled(round.cells).forEach(cell => {
       const slot = document.createElement("div");
       slot.className = "tray-slot";
@@ -1699,6 +1760,7 @@
     document.getElementById("arrange-mark").classList.remove("show");
     document.getElementById("arrange-detail").textContent = "";
     document.getElementById("arrange-buttons").style.display = "none";
+    document.getElementById("answer-reveal").style.display = "none";
     document.getElementById("btn-arrange-again").style.display = "";
     const submit = document.getElementById("btn-submit-arrangement");
     submit.style.display = "";
@@ -1860,6 +1922,9 @@
       shareBtn.textContent = "Share your score";
       document.getElementById("btn-arrange-again").style.display = "none";
       document.getElementById("arrange-detail").textContent = `You got ${score} of ${total} correct.`;
+      fillGrid(document.getElementById("answer-grid"), appState.mode, appState.round);
+      document.getElementById("answer-reveal").style.display = "flex";
+      document.getElementById("arrange-tray").style.display = "none";   // empty now; keep the two grids close
       document.getElementById("arrange-buttons").style.display = "flex";
       return;
     }

@@ -15,7 +15,10 @@
     --correct: #38a169;
     --incorrect: #e53e3e;
     --cell-bg: #ffffff;
+    --vh: 100vh;
   }
+  /* Phones: use the visible screen height (browser bars excluded) when the browser supports it */
+  @supports (height: 100dvh) { :root { --vh: 100dvh; } }
 
   * { box-sizing: border-box; }
 
@@ -210,7 +213,7 @@
     --maxw: 520px;
     display: grid;
     gap: 10px;
-    width: min(100%, var(--maxw), calc((100vh - 190px) * var(--cols) / var(--rows)));
+    width: min(100%, var(--maxw), calc((var(--vh) - 190px) * var(--cols) / var(--rows)));
     grid-template-columns: repeat(var(--cols), 1fr);
     grid-template-rows: repeat(var(--rows), 1fr);
   }
@@ -291,12 +294,19 @@
   }
 
   /* Leave room for the fixed streak bar at the bottom of the page */
-  #screen-arrange { padding-bottom: 72px; }
+  /* --zoom (set from JS by pinching or the -/+ buttons) shrinks or grows the board and the tiles.
+     pan-y: one finger still scrolls the page, but the browser's own pinch-zoom is off so our pinch works. */
+  #screen-arrange { padding-bottom: 72px; --zoom: 1; touch-action: pan-y; }
 
   #arrange-grid {
-    width: min(100%, var(--maxw), calc((100vh - 340px) * var(--cols) / var(--rows)));
-    min-width: 200px;
+    width: min(100%, calc(min(var(--maxw), calc((var(--vh) - 340px) * var(--cols) / var(--rows))) * var(--zoom)));
+    min-width: 140px;
   }
+
+  .board-tools { display: flex; gap: 8px; align-items: center; justify-content: center; flex-wrap: wrap; }
+  .zoom-ctl { display: flex; gap: 6px; align-items: center; }
+  .zoom-btn { padding: 6px 0; width: 44px; font-size: 1.2rem; line-height: 1; }
+  .zoom-hint { font-size: 0.8rem; color: var(--muted); }
 
   .zone {
     background: rgba(255,255,255,0.08);
@@ -336,7 +346,7 @@
     position: relative;
     flex: 0 0 auto;
     width: calc((100% - (var(--per) - 1) * 8px) / var(--per));
-    max-width: 88px;
+    max-width: calc(88px * var(--zoom));
     aspect-ratio: 1;
     border-radius: 12px;
     background: rgba(255,255,255,0.05);
@@ -376,11 +386,11 @@
   }
   .peek-overlay.show { display: flex; }
   .peek-overlay .progress-track { width: 100%; max-width: 520px; }
-  #peek-grid { width: min(100%, var(--maxw), calc((100vh - 360px) * var(--cols) / var(--rows))); min-width: 200px; }
+  #peek-grid { width: min(100%, var(--maxw), calc((var(--vh) - 360px) * var(--cols) / var(--rows))); min-width: 200px; }
   /* Daily Recall: the correct grid shown under the submitted one */
   #answer-reveal { width: 100%; display: flex; flex-direction: column; align-items: center; margin-top: 8px; }
   .answer-reveal-label { margin: 0 0 8px; font-weight: 600; opacity: 0.75; }
-  #answer-grid { width: min(100%, var(--maxw), calc((100vh - 340px) * var(--cols) / var(--rows))); min-width: 200px; margin: 0 auto; }
+  #answer-grid { width: min(100%, calc(min(var(--maxw), calc((var(--vh) - 340px) * var(--cols) / var(--rows))) * var(--zoom))); min-width: 200px; margin: 0 auto; }
 
   .result-mark {
     position: absolute;
@@ -579,7 +589,14 @@
 
   <section class="screen" id="screen-arrange">
     <span class="mode-badge" id="arrange-mode-badge"></span>
-    <button class="secondary peek-btn" id="btn-peek" type="button" style="display:none">2 more seconds</button>
+    <div class="board-tools">
+      <button class="secondary peek-btn" id="btn-peek" type="button" style="display:none">2 more seconds</button>
+      <div class="zoom-ctl" title="Pinch with two fingers, or use these buttons, to make the board smaller or bigger">
+        <button class="secondary zoom-btn" id="btn-zoom-out" type="button" aria-label="Zoom out (smaller board)">&minus;</button>
+        <span class="zoom-hint">Zoom</span>
+        <button class="secondary zoom-btn" id="btn-zoom-in" type="button" aria-label="Zoom in (bigger board)">+</button>
+      </div>
+    </div>
     <div class="arrange-board">
       <div class="grid" id="arrange-grid"></div>
       <div class="peek-overlay" id="peek-overlay">
@@ -1423,8 +1440,25 @@
     const grid = activeDailyGrid();
     if (!grid) { showDailyDone(null, null); return; }
     const done = loadDailyResults()[grid.id];
+    if (done && done.finished === false) { resumeDaily(grid, done); return; }
     if (done) { showDailyDone(grid, done); return; }
     openInstructions(dailyModeFor(grid));
+  }
+
+  // Back after closing the page / leaving mid-game: go straight to the board with the tiles where they were.
+  // The study phase is never shown again, so leaving can't be used to get another look at the grid.
+  function resumeDaily(grid, saved) {
+    const mode = dailyModeFor(grid);
+    appState.roundToken++;
+    clearTimers();
+    appState.mode = mode;
+    appState.streak = 0;
+    appState.round = mode.contentPool[0];
+    appState.question = null;
+    updateStreakDisplay();
+    enterArrange(saved);
+    document.getElementById("arrange-detail").textContent =
+      saved.phase === "arrange" ? "Welcome back! Your tiles are right where you left them." : "Welcome back! Pick up where you left off.";
   }
 
   function showDailyDone(grid, result) {
@@ -1477,7 +1511,8 @@
         ? `After time's up, the grid goes blank and the objects appear in a row at the bottom. ` +
           `Drag each one back to where it was, then tap Submit. Your score is how many squares you get right. ` +
           `You only get one try per day, and there are no hints. ` +
-          `Stuck? Tap "2 more seconds" once to see the full grid again.`
+          `Stuck? Tap "2 more seconds" once to see the full grid again. ` +
+          `If you accidentally leave or close the page, just come back and you'll pick up where you stopped.`
       : mode.variant === "fullrecall"
         ? `After time's up, the grid goes blank and the objects appear in a row at the bottom. ` +
           `Drag each one back to where it was, then tap Submit.`
@@ -1660,7 +1695,7 @@
 
   // zones: one per grid square that held an item ({el, expectedId, item}); items: the draggable tiles
   // ({cell, id, el, slot, zone}). item.zone is the zone it sits in (or null while it is in the tray).
-  let arrange = { zones: [], items: [], locked: true, hintActive: false };
+  let arrange = { zones: [], items: [], locked: true, hintActive: false, peekUsed: false, dragCancels: new Set() };
 
   function shuffled(list) {
     const a = list.slice();
@@ -1692,6 +1727,22 @@
   function updateSubmitState() {
     document.getElementById("btn-submit-arrangement").disabled =
       arrange.locked || !arrange.zones.every(z => z.item);
+  }
+
+  // ---- Daily Recall progress: saved after every move so closing the page doesn't cost the day's game ----
+  function saveDailyProgress() {
+    const mode = appState.mode;
+    if (!mode || mode.variant !== "daily" || arrange.locked) return;
+    const prev = loadDailyResults()[mode.dailyId];
+    if (prev && prev.finished !== false) return;   // already submitted
+    const cells = appState.round.cells;
+    saveDailyResult(mode.dailyId, {
+      score: 0, finished: false, phase: "arrange",
+      trayOrder: arrange.items.map(it => cells.indexOf(it.cell)),
+      placements: arrange.zones.map(z => (z.item ? arrange.items.indexOf(z.item) : -1)),
+      peekUsed: !!arrange.peekUsed,
+      ts: Date.now()
+    });
   }
 
   // ---- "2 more seconds" (Daily Recall only): show the full grid again for 2s, once per game ----
@@ -1730,6 +1781,8 @@
     if (btn.disabled || arrange.locked || arrange.peeking) return;
     btn.disabled = true;
     arrange.peeking = true;
+    arrange.peekUsed = true;
+    saveDailyProgress();
 
     fillGrid(document.getElementById("peek-grid"), mode, round);
 
@@ -1752,7 +1805,8 @@
     requestAnimationFrame(tick);
   }
 
-  function enterArrange() {
+  // saved (Daily Recall only): a game in progress to restore: tray order, placed tiles, and whether the peek was used.
+  function enterArrange(saved) {
     const mode = appState.mode;
     const round = appState.round;
     document.getElementById("arrange-mode-badge").textContent = mode.label;
@@ -1764,7 +1818,7 @@
     grid.classList.toggle("dense", mode.rows * mode.cols > 9);
     grid.innerHTML = "";
 
-    arrange = { zones: [], items: [], locked: false, hintActive: false };
+    arrange = { zones: [], items: [], locked: false, hintActive: false, peekUsed: false, dragCancels: new Set() };
     grid.classList.remove("hinting");
     const byPosition = new Map(round.cells.map(c => [c.r + "," + c.c, c]));
     for (let r = 0; r < mode.rows; r++) {
@@ -1786,7 +1840,10 @@
     const tray = document.getElementById("arrange-tray");
     tray.innerHTML = "";
     tray.style.display = "";
-    shuffled(round.cells).forEach(cell => {
+    const savedOrder = saved && Array.isArray(saved.trayOrder) && saved.trayOrder.length === round.cells.length
+      ? saved.trayOrder.map(i => round.cells[i]) : null;
+    const order = savedOrder && savedOrder.every(Boolean) ? savedOrder : shuffled(round.cells);
+    order.forEach(cell => {
       const slot = document.createElement("div");
       slot.className = "tray-slot";
       const el = document.createElement("div");
@@ -1799,7 +1856,19 @@
       arrange.items.push(item);
     });
 
+    // Put back the tiles the player had already placed (only if the tray order was restored, so indexes match).
+    if (saved && order === savedOrder && Array.isArray(saved.placements)) {
+      saved.placements.forEach((idx, zi) => {
+        const item = arrange.items[idx], zone = arrange.zones[zi];
+        if (item && zone && !item.zone && !zone.item) attachToZone(item, zone);
+      });
+    }
+
     setupPeek(mode, round);
+    if (saved && saved.peekUsed) {
+      arrange.peekUsed = true;
+      document.getElementById("btn-peek").disabled = true;
+    }
     document.getElementById("screen-arrange").classList.remove("arrange-locked");
     document.getElementById("arrange-mark").classList.remove("show");
     document.getElementById("arrange-detail").textContent = "";
@@ -1810,13 +1879,73 @@
     submit.style.display = "";
     updateSubmitState();
     showScreen("screen-arrange");
+    applyBoardZoom();
+    saveDailyProgress();
+  }
 
-    // Size the tray: keep tiles at least 56px wide by wrapping onto extra rows when needed.
+  // Size the tray: keep tiles at least 56px wide (scaled by zoom) by wrapping onto extra rows when needed.
+  function sizeTray() {
+    const tray = document.getElementById("arrange-tray");
     const n = arrange.items.length;
+    if (!n) return;
+    const minTile = Math.max(36, 56 * boardZoom);
     const trayWidth = tray.clientWidth;
     let rows = 1;
-    while (rows < n && (trayWidth - (Math.ceil(n / rows) - 1) * 8) / Math.ceil(n / rows) < 56) rows++;
+    while (rows < n && (trayWidth - (Math.ceil(n / rows) - 1) * 8) / Math.ceil(n / rows) < minTile) rows++;
     tray.style.setProperty("--per", String(Math.ceil(n / rows)));
+  }
+
+  // ---- Board zoom: pinch with two fingers on the board screen, or tap - / + ----
+  const ZOOM_MIN = 0.5, ZOOM_MAX = 1.5, ZOOM_STEP = 0.15;
+  const LS_ZOOM = "memoryGame.boardZoom";
+  let boardZoom = 1;
+  const pinch = { active: false, startDist: 0, startZoom: 1 };
+
+  function applyBoardZoom() {
+    document.getElementById("screen-arrange").style.setProperty("--zoom", String(boardZoom));
+    document.getElementById("btn-zoom-out").disabled = boardZoom <= ZOOM_MIN + 0.001;
+    document.getElementById("btn-zoom-in").disabled = boardZoom >= ZOOM_MAX - 0.001;
+    sizeTray();
+  }
+  function setBoardZoom(z, persist) {
+    boardZoom = Math.min(ZOOM_MAX, Math.max(ZOOM_MIN, Math.round(z * 100) / 100));
+    applyBoardZoom();
+    if (persist) { try { localStorage.setItem(LS_ZOOM, String(boardZoom)); } catch (e) { /* storage blocked */ } }
+  }
+  function touchDist(t) { return Math.hypot(t[0].clientX - t[1].clientX, t[0].clientY - t[1].clientY); }
+
+  function setupBoardZoom() {
+    const saved = parseFloat((() => { try { return localStorage.getItem(LS_ZOOM); } catch (e) { return null; } })());
+    if (saved) boardZoom = Math.min(ZOOM_MAX, Math.max(ZOOM_MIN, saved));
+    applyBoardZoom();
+    document.getElementById("btn-zoom-out").addEventListener("click", () => setBoardZoom(boardZoom - ZOOM_STEP, true));
+    document.getElementById("btn-zoom-in").addEventListener("click", () => setBoardZoom(boardZoom + ZOOM_STEP, true));
+
+    const screen = document.getElementById("screen-arrange");
+    screen.addEventListener("touchstart", (e) => {
+      if (e.touches.length < 2) return;
+      // Second finger down: this is a pinch, not a drag. Drop any tile being dragged back where it came from.
+      Array.from(arrange.dragCancels).forEach(cancel => cancel());
+      pinch.active = true;
+      pinch.startDist = touchDist(e.touches);
+      pinch.startZoom = boardZoom;
+      if (e.cancelable) e.preventDefault();
+    }, { passive: false });
+    screen.addEventListener("touchmove", (e) => {
+      if (!pinch.active || e.touches.length < 2) return;
+      if (e.cancelable) e.preventDefault();   // stop the browser zooming the whole page
+      if (pinch.startDist > 0) setBoardZoom(pinch.startZoom * touchDist(e.touches) / pinch.startDist, false);
+    }, { passive: false });
+    const endPinch = (e) => {
+      if (!pinch.active || e.touches.length >= 2) return;
+      if (e.touches.length === 0) pinch.active = false;   // wait for every finger to lift before allowing drags again
+      setBoardZoom(boardZoom, true);
+    };
+    screen.addEventListener("touchend", endPinch);
+    screen.addEventListener("touchcancel", endPinch);
+    // iOS Safari: keep its own page pinch-zoom from kicking in on the board screen.
+    document.addEventListener("gesturestart", (e) => { if (appState.screen === "screen-arrange") e.preventDefault(); });
+    window.addEventListener("resize", () => { if (appState.screen === "screen-arrange") sizeTray(); });
   }
 
   // ---- Hint: reveal (and lock) the correct tile in one square the player chooses ----
@@ -1869,7 +1998,7 @@
   }
 
   function onTilePointerDown(e, item) {
-    if (arrange.locked || arrange.peeking || item.locked || (e.pointerType === "mouse" && e.button !== 0)) return;
+    if (arrange.locked || arrange.peeking || pinch.active || item.locked || (e.pointerType === "mouse" && e.button !== 0)) return;
     // While choosing a hint square, a tap on a placed tile is a square choice, not a pick-up.
     if (arrange.hintActive && item.zone) return;
     e.preventDefault();
@@ -1907,6 +2036,7 @@
       window.removeEventListener("pointermove", move);
       window.removeEventListener("pointerup", up);
       window.removeEventListener("pointercancel", cancel);
+      arrange.dragCancels.delete(abort);
       setHover(null);
 
       if (!dragging) {
@@ -1915,6 +2045,7 @@
           item.zone.item = null;
           returnToTray(item);
           updateSubmitState();
+          saveDailyProgress();
         }
         return;
       }
@@ -1935,9 +2066,12 @@
         }
       }
       updateSubmitState();
+      saveDailyProgress();
     };
     const up = (ev) => finish(ev, false);
     const cancel = (ev) => finish(ev, true);
+    const abort = () => finish({ pointerId: e.pointerId, clientX: 0, clientY: 0 }, true);
+    arrange.dragCancels.add(abort);
 
     window.addEventListener("pointermove", move);
     window.addEventListener("pointerup", up);
@@ -2218,6 +2352,7 @@
 
   function init() {
     renderMenu();
+    setupBoardZoom();
 
     document.querySelectorAll("#leaderboard-tabs .lb-tab").forEach(btn => {
       btn.addEventListener("click", () => {
@@ -2240,8 +2375,11 @@
       if (mode.variant === "daily") {
         // One try only: starting counts as playing, so leaving or refreshing can't be used to peek and retry.
         const grid = activeDailyGrid();
-        if (!grid || loadDailyResults()[grid.id]) { showDailyDone(grid, grid && loadDailyResults()[grid.id]); return; }
-        saveDailyResult(grid.id, { score: 0, finished: false, ts: Date.now() });
+        const existing = grid && loadDailyResults()[grid.id];
+        if (existing && existing.finished === false) { resumeDaily(grid, existing); return; }
+        if (!grid || existing) { showDailyDone(grid, existing); return; }
+        // Saved as "in progress" (not a score): coming back later resumes on the board instead of locking the player out.
+        saveDailyResult(grid.id, { score: 0, finished: false, phase: "study", ts: Date.now() });
       }
       startRound(mode);
     });
